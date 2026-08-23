@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" viewBox="0 0 800 480" role="img" aria-label="Imagem neutra de atividade">
+  <rect width="800" height="480" fill="#E8EEF1"/>
+  <rect x="80" y="80" width="640" height="320" rx="8" fill="#FFFFFF" stroke="#D7E0E5"/>
+  <path d="M140 330h520l-150-130-96 80-72-56-202 106z" fill="#146E91"/>
+  <circle cx="570" cy="150" r="42" fill="#00A5C8"/>
+</svg>

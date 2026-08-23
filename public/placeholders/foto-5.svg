@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" viewBox="0 0 800 480" role="img" aria-label="Imagem neutra de materiais">
+  <rect width="800" height="480" fill="#E8EEF1"/>
+  <rect x="100" y="120" width="600" height="240" rx="8" fill="#FFFFFF" stroke="#D7E0E5"/>
+  <rect x="150" y="170" width="500" height="36" fill="#26865B"/>
+  <rect x="150" y="232" width="360" height="36" fill="#146E91"/>
+  <rect x="150" y="294" width="430" height="36" fill="#123F5C"/>
+</svg>

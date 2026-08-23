@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" viewBox="0 0 800 480" role="img" aria-label="Imagem neutra de oficina">
+  <rect width="800" height="480" fill="#E8EEF1"/>
+  <rect x="110" y="105" width="580" height="270" rx="8" fill="#FFFFFF" stroke="#D7E0E5"/>
+  <rect x="155" y="155" width="490" height="42" fill="#123F5C"/>
+  <rect x="155" y="225" width="190" height="92" fill="#00A5C8"/>
+  <rect x="375" y="225" width="270" height="92" fill="#F58220"/>
+</svg>

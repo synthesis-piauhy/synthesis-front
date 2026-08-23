@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>synthesis | Relatório técnico do frontend</title>
+    <style>
+      @page {
+        margin: 22mm;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: #243746;
+        background: #ffffff;
+        font-family: Inter, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      h1,
+      h2,
+      h3 {
+        color: #123f5c;
+        line-height: 1.2;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+      }
+
+      h2 {
+        margin: 28px 0 10px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #d7e0e5;
+        font-size: 20px;
+      }
+
+      h3 {
+        margin: 18px 0 8px;
+        font-size: 16px;
+      }
+
+      p {
+        margin: 8px 0;
+      }
+
+      ul {
+        margin: 8px 0 12px 20px;
+        padding: 0;
+      }
+
+      li {
+        margin: 4px 0;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 5px;
+        background: #f7f9fa;
+        color: #123f5c;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+      }
+
+      pre {
+        overflow: hidden;
+        padding: 12px;
+        border: 1px solid #d7e0e5;
+        border-radius: 8px;
+        background: #f7f9fa;
+        color: #243746;
+        font-size: 12px;
+        white-space: pre-wrap;
+      }
+
+      .cover {
+        min-height: 55vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        border-bottom: 4px solid #00a5c8;
+      }
+
+      .brand {
+        color: #123f5c;
+        font-size: 42px;
+        font-weight: 700;
+      }
+
+      .subtitle {
+        max-width: 620px;
+        color: #667785;
+        font-size: 17px;
+      }
+
+      .note {
+        margin: 14px 0;
+        padding: 12px 14px;
+        border-left: 4px solid #00a5c8;
+        background: #f7f9fa;
+      }
+
+      .warning {
+        border-left-color: #f58220;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .box {
+        padding: 12px;
+        border: 1px solid #d7e0e5;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .small {
+        color: #667785;
+        font-size: 12px;
+      }
+
+      .page-break {
+        page-break-before: always;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="cover">
+      <div class="brand">synthesis</div>
+      <h1>Relatório técnico do frontend</h1>
+      <p class="subtitle">
+        Explicação direta, sem espuma, para quem vem do backend e quer entender onde estão as peças,
+        como os dados circulam e onde encaixar a futura API Django.
+      </p>
+      <p class="small">Gerado em 23/08/2026.</p>
+    </section>
+
+    <h2>1. Resumo para cérebro cansado</h2>
+    <p>
+      Este projeto é um frontend Next.js para a aplicação interna <strong>synthesis</strong>.
+      Ele não é um kanban, não mede produtividade e não tenta virar ferramenta de gestão de tarefas.
+      A missão dele é simples:
+    </p>
+    <ul>
+      <li>gestores registram atividades reais feitas na semana;</li>
+      <li>a gerente escolhe quais relatos entram no relatório;</li>
+      <li>o sistema monta um rascunho visual em mosaico;</li>
+      <li>a gerente edita somente o card editorial;</li>
+      <li>o relato original continua intacto;</li>
+      <li>o sistema gera versões de PDF para histórico.</li>
+    </ul>
+    <div class="note">
+      Pense assim: <code>ActivityReport</code> é o dado original, tipo uma tabela imutável de entrada.
+      <code>ReportCard</code> é a cópia editorial usada no relatório, tipo uma view materializada editável.
+    </div>
+
+    <h2>2. Stack usada</h2>
+    <div class="grid">
+      <div class="box">
+        <h3>Framework</h3>
+        <p><code>Next.js</code> com App Router, React e TypeScript strict.</p>
+      </div>
+      <div class="box">
+        <h3>UI</h3>
+        <p><code>Tailwind CSS</code>, componentes locais no estilo shadcn/ui e ícones Lucide.</p>
+      </div>
+      <div class="box">
+        <h3>Formulário</h3>
+        <p><code>React Hook Form</code> com validação via <code>Zod</code>.</p>
+      </div>
+      <div class="box">
+        <h3>Dados assíncronos</h3>
+        <p><code>TanStack Query</code> para cache e estado de carregamento.</p>
+      </div>
+      <div class="box">
+        <h3>Editor</h3>
+        <p><code>dnd-kit</code> para reordenar cards do relatório.</p>
+      </div>
+      <div class="box">
+        <h3>Imagem</h3>
+        <p><code>react-easy-crop</code> para a tela de recorte.</p>
+      </div>
+    </div>
+
+    <h2>3. Como rodar sem drama</h2>
+    <pre>npm install
+npm run dev</pre>
+    <p>
+      Depois abra <code>http://localhost:3000</code>. Se quiser usar outra porta:
+    </p>
+    <pre>npm run dev -- -p 3001</pre>
+
+    <h3>Comandos de validação</h3>
+    <pre>npm run typecheck
+npm run lint
+npm test
+npm run build</pre>
+
+    <h2>4. Estrutura mental do projeto</h2>
+    <pre>src/
+  app/                  rotas do Next App Router
+  components/           peças reutilizáveis de tela
+  components/activity/  relatos e formulário de atividade
+  components/report/    seleção, editor, canvas A4 e PDF
+  components/layout/    menu lateral, cabeçalho e shell
+  services/             camada de API e mocks
+  types.ts              tipos centrais do domínio
+  lib/                  utilitários pequenos
+  test/                 testes</pre>
+
+    <p>
+      Se você veio do backend, leia nesta ordem:
+    </p>
+    <ul>
+      <li><code>src/types.ts</code>: entidades do domínio.</li>
+      <li><code>src/services/api.ts</code>: contrato da API que o Django deve implementar depois.</li>
+      <li><code>src/services/mock-data.ts</code>: dados fake usados agora.</li>
+      <li><code>src/app/...</code>: páginas e rotas.</li>
+      <li><code>src/components/...</code>: pedaços visuais reutilizáveis.</li>
+    </ul>
+
+    <h2>5. As entidades que importam</h2>
+    <h3><code>ActivityReport</code></h3>
+    <p>
+      É o relato original enviado pelo gestor. Contém título, data, local, descrição, resultado,
+      público beneficiado, área, gestor e fotos.
+    </p>
+    <p>
+      Regra de ouro: edição editorial não mexe aqui.
+    </p>
+
+    <h3><code>ReportCard</code></h3>
+    <p>
+      É a versão editorial do relato dentro do relatório. Pode ter título resumido, texto editado,
+      resultado adaptado, foto escolhida e ordem manual.
+    </p>
+    <p>
+      Regra de ouro: mexer no card não altera o relato original.
+    </p>
+
+    <h3><code>WeeklyReport</code></h3>
+    <p>
+      Representa o relatório semanal. Guarda atividades selecionadas, seções por área, cards e versões
+      de PDF geradas.
+    </p>
+
+    <h3><code>ReportVersion</code></h3>
+    <p>
+      Cada geração de PDF cria uma nova versão. Versões antigas não são sobrescritas visualmente.
+    </p>
+
+    <div class="note warning">
+      Se no backend você fizer um endpoint que atualiza <code>ActivityReport</code> quando a gerente edita
+      <code>ReportCard</code>, o sistema fica conceitualmente errado. É tipo dar UPDATE na nota fiscal
+      porque alguém corrigiu o texto do e-mail.
+    </div>
+
+    <h2 class="page-break">6. Fluxo principal</h2>
+    <h3>1. Gestor registra atividade</h3>
+    <p>
+      Rota: <code>/relatos/novo</code>. O formulário valida campos obrigatórios e exige foto principal.
+      O gestor e a área vêm preenchidos a partir do usuário autenticado.
+    </p>
+
+    <h3>2. Gerente seleciona relatos</h3>
+    <p>
+      Rota: <code>/relatorio-semanal/selecao</code>. A gerente marca quais relatos entram no relatório.
+      Nada selecionado significa botão de rascunho desabilitado.
+    </p>
+
+    <h3>3. Sistema gera rascunho</h3>
+    <p>
+      A função <code>generateDraft</code> cria um <code>WeeklyReport</code> com seções por área e cards
+      baseados nos relatos selecionados.
+    </p>
+
+    <h3>4. Gerente edita mosaico</h3>
+    <p>
+      Rota: <code>/relatorio-semanal/[id]/editar</code>. A tela tem três colunas:
+    </p>
+    <ul>
+      <li>esquerda: áreas e páginas;</li>
+      <li>centro: prévia em proporção A4;</li>
+      <li>direita: propriedades do card selecionado.</li>
+    </ul>
+
+    <h3>5. Geração do PDF</h3>
+    <p>
+      A ação valida se há cards e cria uma nova <code>ReportVersion</code>. Hoje é mockado; depois vira
+      chamada real ao backend.
+    </p>
+
+    <h2>7. Onde entra o Django</h2>
+    <p>
+      A integração futura fica centralizada em <code>src/services/api.ts</code>. A ideia é trocar o
+      <code>mockApi</code> por um cliente HTTP real sem sair editando componente por componente.
+    </p>
+
+    <h3>Contrato previsto</h3>
+    <ul>
+      <li><code>getAuthenticatedUser</code>: usuário logado.</li>
+      <li><code>listWeeklyCycles</code>: semanas de coleta.</li>
+      <li><code>listActivityReports</code>: relatos filtráveis.</li>
+      <li><code>createActivityReport</code>: cria relato.</li>
+      <li><code>uploadPhotos</code>: envia imagens.</li>
+      <li><code>getCollectionOverview</code>: resumo da coleta.</li>
+      <li><code>generateDraft</code>: cria relatório editorial.</li>
+      <li><code>updateReportCard</code>: edita card editorial.</li>
+      <li><code>reorderReportCards</code>: salva ordem manual.</li>
+      <li><code>removeReportCard</code>: retira card sem apagar relato.</li>
+      <li><code>generatePdf</code>: gera nova versão.</li>
+      <li><code>getPdfUrl</code>: retorna URL do PDF.</li>
+    </ul>
+
+    <h3>Variável de ambiente</h3>
+    <p>
+      O arquivo já prevê <code>NEXT_PUBLIC_API_URL</code>. Quando a API Django existir, o cliente real
+      deve usar essa URL como base.
+    </p>
+
+    <h2>8. Permissões</h2>
+    <ul>
+      <li><strong>Gestor:</strong> cria e consulta relatos; não edita mosaico.</li>
+      <li><strong>Gerente:</strong> seleciona relatos, edita cards e gera PDF.</li>
+      <li><strong>Administrador técnico:</strong> acessa administração de usuários, áreas e prazos.</li>
+    </ul>
+    <p>
+      A proteção visual usa <code>RoleGuard</code>. No mundo real, o backend ainda precisa validar tudo.
+      Frontend escondendo botão não é segurança; é só educação visual.
+    </p>
+
+    <h2>9. Arquivos importantes</h2>
+    <ul>
+      <li><code>src/types.ts</code>: vocabulário do sistema.</li>
+      <li><code>src/services/api.ts</code>: interface da API e mock atual.</li>
+      <li><code>src/services/mock-data.ts</code>: massa simulada em português.</li>
+      <li><code>src/components/activity/ActivityForm.tsx</code>: cadastro de atividade.</li>
+      <li><code>src/components/activity/activitySchema.ts</code>: validação Zod.</li>
+      <li><code>src/app/relatorio-semanal/selecao/page.tsx</code>: seleção editorial.</li>
+      <li><code>src/app/relatorio-semanal/[id]/editar/page.tsx</code>: editor do mosaico.</li>
+      <li><code>src/components/report/ReportCanvas.tsx</code>: área A4 com dnd-kit.</li>
+      <li><code>src/test/domain.test.ts</code>: testes de regras centrais.</li>
+    </ul>
+
+    <h2>10. Testes existentes</h2>
+    <p>
+      Os testes estão em <code>src/test/domain.test.ts</code>. Eles cobrem:
+    </p>
+    <ul>
+      <li>validação do formulário de atividade;</li>
+      <li>bloqueio sem foto principal;</li>
+      <li>permissões por perfil;</li>
+      <li>seleção de relatos;</li>
+      <li>botão de rascunho desabilitado sem seleção;</li>
+      <li>reordenação de cards;</li>
+      <li>preservação do relato original;</li>
+      <li>retirada de card sem excluir relato;</li>
+      <li>geração de nova versão;</li>
+      <li>fluxo completo de ponta a ponta.</li>
+    </ul>
+
+    <h2>11. Checklist para mexer sem quebrar</h2>
+    <ul>
+      <li>Não coloque <code>fetch</code> direto em componente.</li>
+      <li>Não edite <code>ActivityReport</code> quando a ação for editorial.</li>
+      <li>Não crie status de tarefa.</li>
+      <li>Não transforme a home em dashboard cheio de gráfico.</li>
+      <li>Não invente marca, slogan ou logo.</li>
+      <li>Use sempre o nome <strong>synthesis</strong>.</li>
+      <li>Antes de entregar, rode <code>npm run typecheck</code>, <code>npm run lint</code>, <code>npm test</code> e <code>npm run build</code>.</li>
+    </ul>
+
+    <h2>12. Tradução backendês</h2>
+    <pre>ActivityReport  = tabela de entrada, fonte da verdade
+ReportCard      = DTO/editorial snapshot para o relatório
+WeeklyReport    = aggregate root do relatório semanal
+ReportSection   = agrupamento por área
+ReportVersion   = artefato gerado, imutável
+mockApi         = fake repository/client
+TanStack Query  = cache client-side + loading/error states
+RoleGuard       = autorização visual, não segurança real</pre>
+
+    <div class="note">
+      Resumo final: o frontend está montado para trocar mock por Django sem precisar sair catando chamada
+      HTTP perdida pela interface. O cérebro pode descansar por cinco minutos.
+    </div>
+  </body>
+</html>
