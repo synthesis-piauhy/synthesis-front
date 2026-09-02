@@ -7,11 +7,12 @@ import { ActivityForm } from "@/components/activity/ActivityForm";
 import { api } from "@/services/api";
 
 export default function NewActivityPage() {
-  const overview = useQuery({ queryKey: ["overview"], queryFn: api.getCollectionOverview });
+  const cycles = useQuery({ queryKey: ["cycles"], queryFn: api.listWeeklyCycles });
+  const open = cycles.data?.some((cycle) => cycle.status === "aberta" || cycle.status === "reaberta");
   return (
     <AppShell>
       <PageHeader title="Nova atividade" description="Registre uma atividade efetivamente realizada durante a semana." />
-      <ActivityForm closed={overview.data?.cycle.status === "encerrada"} />
+      <ActivityForm closed={!cycles.isLoading && !open} />
     </AppShell>
   );
 }

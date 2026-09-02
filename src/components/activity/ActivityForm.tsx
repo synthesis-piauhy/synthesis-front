@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/app/providers";
 import { api } from "@/services/api";
+import { currentCycle } from "@/lib/cycles";
 import type { Area } from "@/types";
 import { Button } from "../ui/button";
 import { Input, Textarea } from "../ui/input";
@@ -20,7 +21,9 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
   const areas = useQuery({ queryKey: ["areas"], queryFn: api.listAreas });
   const users = useQuery({ queryKey: ["users"], queryFn: api.listUsers });
+  const cycles = useQuery({ queryKey: ["cycles"], queryFn: api.listWeeklyCycles });
   const createMutation = useMutation({ mutationFn: api.createActivityReport });
+  const cycle = currentCycle(cycles.data);
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activitySchema),
     values: {
@@ -31,13 +34,13 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
       result: "",
       beneficiaries: "",
       area: user?.area ?? "Agro",
-      managerId: user?.id ?? "u1",
+      managerId: user?.id ?? "",
       mainPhoto: mainFiles[0] as File,
       additionalPhotos: additionalFiles,
     },
   });
 
-  if (closed) {
+  if (closed || (!cycles.isLoading && (!cycle || cycle.status === "encerrada"))) {
     return (
       <div className="rounded-app border border-warning bg-white p-6 text-text shadow-subtle">
         Os relatos desta semana foram encerrados. Entre em contato com a gerência caso seja necessária a reabertura do período.
@@ -50,14 +53,15 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
   return (
     <form
       className="space-y-5 rounded-app border border-border bg-white p-5 shadow-subtle"
-      onSubmit={form.handleSubmit((values) =>
+      onSubmit={form.handleSubmit((values) => {
+        if (!cycle) return;
         createMutation.mutate({
           ...values,
           area: values.area as Area,
           photos: [values.mainPhoto, ...values.additionalPhotos],
-          cycleId: "c1",
-        }),
-      )}
+          cycleId: cycle.id,
+        });
+      })}
     >
       <div className="grid gap-4 md:grid-cols-2">
         <label className="text-sm font-medium">
@@ -141,7 +145,7 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
       />
       {createMutation.isSuccess ? <p className="rounded-app border border-success p-3 text-sm text-success">Relato salvo com confirmação.</p> : null}
       {createMutation.isError ? <p className="rounded-app border border-danger p-3 text-sm text-danger">Não foi possível salvar. Tente novamente.</p> : null}
-      <Button type="submit" disabled={createMutation.isPending}>
+      <Button type="submit" disabled={createMutation.isPending || cycles.isLoading || !cycle}>
         <Save size={16} aria-hidden />
         {createMutation.isPending ? "Salvando" : "Salvar atividade"}
       </Button>

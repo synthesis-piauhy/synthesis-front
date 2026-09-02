@@ -6,5 +6,6 @@ import { useAuth } from "@/app/providers";
 
 export function RoleGuard({ allowed, children, fallback = null }: { allowed: UserRole[]; children: ReactNode; fallback?: ReactNode }) {
   const { role } = useAuth();
-  return allowed.includes(role) ? <>{children}</> : <>{fallback}</>;
+  return role && allowed.includes(role) ? <>{children}</> : <>{fallback}</>;
 }
+

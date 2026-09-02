@@ -19,9 +19,11 @@ import { CropImageDialog } from "@/components/report/CropImageDialog";
 import { SaveStatus } from "@/components/report/SaveStatus";
 import { api } from "@/services/api";
 import type { ReportCard, WeeklyReport } from "@/types";
+import { useAuth } from "@/app/providers";
 
 export default function ReportEditorPage() {
   const params = useParams<{ id: string }>();
+  const { role } = useAuth();
   const [selectedCardId, setSelectedCardId] = useState<string>();
   const [localReport, setLocalReport] = useState<WeeklyReport>();
   const [lastCard, setLastCard] = useState<ReportCard>();
@@ -31,6 +33,7 @@ export default function ReportEditorPage() {
   const reportQuery = useQuery({
     queryKey: ["weeklyReport", params.id],
     queryFn: () => api.getWeeklyReport(params.id),
+    enabled: role === "gerente",
   });
   const activities = useQuery({ queryKey: ["activityReports"], queryFn: () => api.listActivityReports() });
   const cycles = useQuery({ queryKey: ["cycles"], queryFn: api.listWeeklyCycles });
@@ -43,6 +46,7 @@ export default function ReportEditorPage() {
   const selectedActivity = activities.data?.find((activity) => activity.id === selectedCard?.activityReportId);
   const cycleLabel = cycles.data?.find((cycle) => cycle.id === report?.cycleId)?.label ?? "Semana selecionada";
   const activePhoto = selectedActivity?.photos.find((photo) => photo.id === selectedCard?.selectedPhotoId)?.url;
+  const pdfUrl = generate.data?.pdfUrl ?? report?.versions.at(-1)?.pdfUrl;
 
   function patchCard(cardId: string, changes: Partial<ReportCard>) {
     if (!report) return;
@@ -142,8 +146,14 @@ export default function ReportEditorPage() {
               </div>
             ) : null}
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline"><Eye size={16} />Visualizar PDF</Button>
-              <Button variant="outline"><Download size={16} />Baixar PDF</Button>
+              <Button variant="outline" disabled={!pdfUrl} onClick={() => pdfUrl && window.open(pdfUrl, "_blank", "noopener,noreferrer")}><Eye size={16} />Visualizar PDF</Button>
+              <Button variant="outline" disabled={!pdfUrl} onClick={() => {
+                if (!pdfUrl) return;
+                const link = document.createElement("a");
+                link.href = pdfUrl;
+                link.download = `synthesis-relatorio-v${generate.data?.version ?? report?.versions.at(-1)?.version ?? 1}.pdf`;
+                link.click();
+              }}><Download size={16} />Baixar PDF</Button>
               <Button onClick={() => setPreviewOpen(false)}>Voltar ao editor</Button>
             </div>
           </div>

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const isFile = (value: unknown): value is File => typeof File !== "undefined" && value instanceof File;
 const fileSchema = z.custom<File>(isFile, "Informe uma imagem válida.");
-const validImage = (file: File) => ["image/jpeg", "image/png", "image/webp", "image/svg+xml"].includes(file.type) && file.size <= 5 * 1024 * 1024;
+const validImage = (file: File) => ["image/jpeg", "image/png", "image/webp"].includes(file.type) && file.size <= 5 * 1024 * 1024;
 
 export const activitySchema = z.object({
   title: z.string().min(3, "Informe o título da atividade."),

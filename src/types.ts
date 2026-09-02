@@ -15,7 +15,7 @@ export type User = {
   id: string;
   name: string;
   email: string;
-  area: Area;
+  area: Area | null;
   role: UserRole;
   active: boolean;
 };

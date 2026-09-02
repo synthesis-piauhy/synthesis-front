@@ -10,12 +10,14 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
 import { api } from "@/services/api";
 import { reportStatusLabel } from "@/lib/utils";
+import { useAuth } from "../providers";
 
 export default function WeeklyReportPage() {
-  const reports = useQuery({ queryKey: ["weeklyReports"], queryFn: api.listWeeklyReports });
+  const { role } = useAuth();
+  const reports = useQuery({ queryKey: ["weeklyReports"], queryFn: api.listWeeklyReports, enabled: role === "gerente" });
   const current = reports.data?.[0];
   return (
-    <AppShell>
+    <AppShell><RoleGuard allowed={["gerente"]} fallback={<EmptyState title="Acesso restrito" description="O relatório editorial é exclusivo da gerente." />}>
       <PageHeader
         title="Relatório semanal"
         description="Acompanhe o relatório da semana e as versões geradas."
@@ -44,6 +46,6 @@ export default function WeeklyReportPage() {
           </div>
         </section>
       ) : null}
-    </AppShell>
+    </RoleGuard></AppShell>
   );
 }
