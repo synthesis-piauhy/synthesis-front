@@ -23,8 +23,8 @@ renova o access token automaticamente enquanto o refresh token for válido.
   o ciclo estiver aberto ou reaberto.
 - **Gerente:** acompanha pendências, fecha a seleção ao gerar o rascunho, edita
   cards sem alterar os relatos originais e gera versões imutáveis do PDF.
-- **Administrador:** consulta áreas e usuários e reabre ciclos com justificativa
-  e novo prazo futuro. Cadastros continuam sendo feitos no Django Admin.
+- **Administrador:** cria e edita usuários, áreas e ciclos, encerra e reabre a coleta,
+  e consulta os registros e a auditoria. Superusuários também administram grupos e permissões técnicas.
 
 As telas exibem apenas ações aceitas pelo contrato da API. Erros de permissão,
 estado do ciclo e validação de domínio são apresentados usando a mensagem
@@ -38,3 +38,20 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+## Administração
+
+O menu `/administracao` oferece busca, paginação, detalhes e formulários conectados à API:
+
+- `/administracao/usuarios`: cadastro, edição, ativação, senha e acessos.
+- `/administracao/areas`: nome, ordem e ativação, incluindo áreas inativas.
+- `/administracao/prazos`: cadastro de ciclos, datas, encerramento e reabertura justificada.
+- `/administracao/grupos`: grupos e permissões, editáveis por superusuários.
+- `/administracao/permissoes`: catálogo de permissões técnicas.
+- `/administracao/relatos`, `/fotos`, `/relatorios`, `/secoes`, `/cards`, `/versoes` e `/auditoria`
+  (todos sob `/administracao`): consulta de registros, imagens, PDFs e histórico.
+
+O backend precisa incluir a API `/api/administration`. As ações exibidas respeitam as capacidades
+retornadas por ela. Exclusões exigem confirmação e vínculos protegidos são apresentados como erros.
+Os campos técnicos de usuários aparecem somente para superusuários. Grupos e permissões técnicas
+se aplicam ao Django Admin; o perfil continua determinando os fluxos de gestor, gerente e administrador.
