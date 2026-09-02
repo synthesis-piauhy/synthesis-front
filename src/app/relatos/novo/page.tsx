@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { ActivityForm } from "@/components/activity/ActivityForm";
+import { RoleGuard } from "@/components/RoleGuard";
+import { EmptyState } from "@/components/EmptyState";
 import { api } from "@/services/api";
 
 export default function NewActivityPage() {
@@ -11,8 +13,11 @@ export default function NewActivityPage() {
   const open = cycles.data?.some((cycle) => cycle.status === "aberta" || cycle.status === "reaberta");
   return (
     <AppShell>
-      <PageHeader title="Nova atividade" description="Registre uma atividade efetivamente realizada durante a semana." />
-      <ActivityForm closed={!cycles.isLoading && !open} />
+      <RoleGuard allowed={["gestor"]} fallback={<EmptyState title="Acesso restrito" description="Somente gestores registram atividades." />}>
+        <PageHeader title="Nova atividade" description="Registre uma atividade efetivamente realizada durante a semana." />
+        <ActivityForm closed={!cycles.isLoading && !open} />
+      </RoleGuard>
     </AppShell>
   );
 }
+

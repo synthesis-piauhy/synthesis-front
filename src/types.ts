@@ -1,12 +1,6 @@
 export type UserRole = "gestor" | "gerente" | "admin";
 
-export type Area =
-  | "Agro"
-  | "Gastronomia"
-  | "Indústria e Móveis"
-  | "Moda"
-  | "Educação"
-  | "Jornadas Empresariais";
+export type Area = string;
 
 export type CollectionStatus = "aberta" | "encerrada" | "reaberta";
 export type ReportStatus = "nao_iniciado" | "em_selecao" | "rascunho" | "em_edicao" | "pdf_gerado";

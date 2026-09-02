@@ -30,7 +30,7 @@ export function ReportCard({
         card.removed && "hidden",
       )}
     >
-      {photo ? <Image src={photo.url} alt={photo.alt} width={360} height={190} className="h-28 w-full rounded-md object-cover" /> : null}
+      {photo ? <Image src={photo.url} alt={photo.alt} width={360} height={190} className="h-28 w-full rounded-md object-cover" unoptimized /> : null}
       <div className="mt-2 space-y-1">
         <h4 className="text-sm font-semibold text-primary">{card.editorialTitle}</h4>
         <p className="text-xs text-muted">{formatDate(card.originalDate)}</p>

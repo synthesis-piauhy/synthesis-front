@@ -2,43 +2,62 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers";
 import { api } from "@/services/api";
 import { currentCycle } from "@/lib/cycles";
 import type { Area } from "@/types";
 import { Button } from "../ui/button";
 import { Input, Textarea } from "../ui/input";
-import { Select } from "../ui/select";
 import { activitySchema, type ActivityFormValues } from "./activitySchema";
 import { PhotoUploader } from "./PhotoUploader";
 
 export function ActivityForm({ closed = false }: { closed?: boolean }) {
-  const { user, role } = useAuth();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [mainFiles, setMainFiles] = useState<File[]>([]);
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([]);
-  const areas = useQuery({ queryKey: ["areas"], queryFn: api.listAreas });
-  const users = useQuery({ queryKey: ["users"], queryFn: api.listUsers });
   const cycles = useQuery({ queryKey: ["cycles"], queryFn: api.listWeeklyCycles });
-  const createMutation = useMutation({ mutationFn: api.createActivityReport });
   const cycle = currentCycle(cycles.data);
+  const createMutation = useMutation({
+    mutationFn: api.createActivityReport,
+    onSuccess: async (created) => {
+      await queryClient.invalidateQueries({ queryKey: ["activityReports"] });
+      router.push(`/relatos/${created.id}`);
+    },
+  });
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activitySchema),
-    values: {
+    defaultValues: {
       title: "",
-      date: new Date().toISOString().slice(0, 10),
+      date: "",
       location: "",
       summary: "",
       result: "",
       beneficiaries: "",
-      area: user?.area ?? "Agro",
-      managerId: user?.id ?? "",
-      mainPhoto: mainFiles[0] as File,
-      additionalPhotos: additionalFiles,
+      area: "",
+      managerId: "",
+      mainPhoto: undefined,
+      additionalPhotos: [],
     },
   });
+
+  useEffect(() => {
+    if (!cycle) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const initialDate = today < cycle.startsAt || today > cycle.endsAt ? cycle.endsAt : today;
+    form.setValue("date", initialDate);
+  }, [cycle, form]);
+
+  useEffect(() => {
+    if (!user) return;
+    form.setValue("area", user.area ?? "");
+    form.setValue("managerId", user.id);
+  }, [form, user]);
 
   if (closed || (!cycles.isLoading && (!cycle || cycle.status === "encerrada"))) {
     return (
@@ -48,21 +67,31 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
     );
   }
 
+  if (user && !user.area) {
+    return <div className="rounded-app border border-danger bg-white p-6 text-danger">Seu usuário precisa estar vinculado a uma área antes de registrar relatos.</div>;
+  }
+
   const error = (field: keyof ActivityFormValues) => form.formState.errors[field]?.message?.toString();
 
   return (
     <form
       className="space-y-5 rounded-app border border-border bg-white p-5 shadow-subtle"
       onSubmit={form.handleSubmit((values) => {
-        if (!cycle) return;
+        if (!cycle || !user?.area) return;
         createMutation.mutate({
           ...values,
-          area: values.area as Area,
+          area: user.area as Area,
+          managerId: user.id,
           photos: [values.mainPhoto, ...values.additionalPhotos],
           cycleId: cycle.id,
         });
       })}
     >
+      {cycle ? (
+        <div className="rounded-app border border-border bg-page p-3 text-sm text-muted">
+          Período aceito: {new Date(`${cycle.startsAt}T00:00:00`).toLocaleDateString("pt-BR")} a {new Date(`${cycle.endsAt}T00:00:00`).toLocaleDateString("pt-BR")}. A primeira imagem será a foto principal.
+        </div>
+      ) : null}
       <div className="grid gap-4 md:grid-cols-2">
         <label className="text-sm font-medium">
           Título da atividade
@@ -71,7 +100,7 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
         </label>
         <label className="text-sm font-medium">
           Data
-          <Input className="mt-1" type="date" {...form.register("date")} />
+          <Input className="mt-1" type="date" min={cycle?.startsAt} max={cycle?.endsAt} {...form.register("date")} />
           {error("date") ? <span className="text-sm text-danger">{error("date")}</span> : null}
         </label>
         <label className="text-sm font-medium">
@@ -86,23 +115,11 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
         </label>
         <label className="text-sm font-medium">
           Área
-          <Select className="mt-1" {...form.register("area")} disabled={role === "gestor"}>
-            {areas.data?.map((area) => (
-              <option key={area}>{area}</option>
-            ))}
-          </Select>
+          <Input className="mt-1" value={user?.area ?? ""} disabled />
         </label>
         <label className="text-sm font-medium">
           Gestor responsável
-          <Select className="mt-1" {...form.register("managerId")} disabled={role === "gestor"}>
-            {users.data
-              ?.filter((item) => item.role === "gestor")
-              .map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-          </Select>
+          <Input className="mt-1" value={user?.name ?? ""} disabled />
         </label>
       </div>
       <label className="block text-sm font-medium">
@@ -142,12 +159,12 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
           setAdditionalFiles(next);
           form.setValue("additionalPhotos", next, { shouldValidate: true });
         }}
+        error={error("additionalPhotos")}
       />
-      {createMutation.isSuccess ? <p className="rounded-app border border-success p-3 text-sm text-success">Relato salvo com confirmação.</p> : null}
-      {createMutation.isError ? <p className="rounded-app border border-danger p-3 text-sm text-danger">Não foi possível salvar. Tente novamente.</p> : null}
+      {createMutation.isError ? <p role="alert" className="rounded-app border border-danger p-3 text-sm text-danger">{createMutation.error.message}</p> : null}
       <Button type="submit" disabled={createMutation.isPending || cycles.isLoading || !cycle}>
         <Save size={16} aria-hidden />
-        {createMutation.isPending ? "Salvando" : "Salvar atividade"}
+        {createMutation.isPending ? "Salvando..." : "Salvar atividade"}
       </Button>
     </form>
   );

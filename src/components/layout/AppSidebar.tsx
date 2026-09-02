@@ -10,7 +10,7 @@ import { Button } from "../ui/button";
 const items = [
   { href: "/", label: "Início", icon: Home },
   { href: "/relatos", label: "Relatos", icon: Files },
-  { href: "/relatos/novo", label: "Nova atividade", icon: FilePlus2 },
+  { href: "/relatos/novo", label: "Nova atividade", icon: FilePlus2, manager: true },
   { href: "/relatorio-semanal", label: "Relatório semanal", icon: BarChart3, editor: true },
   { href: "/historico", label: "Histórico", icon: History, editor: true },
   { href: "/administracao", label: "Administração", icon: Settings, admin: true },
@@ -28,7 +28,11 @@ export function AppSidebar() {
       </div>
       <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Menu principal">
         {items
-          .filter((item) => (!item.admin || role === "admin") && (!item.editor || role === "gerente"))
+          .filter((item) =>
+            (!item.admin || role === "admin") &&
+            (!item.editor || role === "gerente") &&
+            (!item.manager || role === "gestor"),
+          )
           .map((item) => {
             const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
             const Icon = item.icon;

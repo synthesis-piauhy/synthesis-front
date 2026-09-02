@@ -16,6 +16,17 @@ export function getAccessToken() {
   return storage()?.getItem(ACCESS_TOKEN_KEY) ?? null;
 }
 
+export async function verifyAccessToken() {
+  const token = getAccessToken();
+  if (!token) return false;
+  const response = await fetch(`${apiBaseUrl}/token/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  return response.ok;
+}
+
 export function hasSession() {
   return Boolean(storage()?.getItem(REFRESH_TOKEN_KEY));
 }
@@ -31,11 +42,16 @@ function storeTokens(tokens: TokenPair) {
 }
 
 async function tokenRequest(path: string, body: Record<string, string>) {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("Não foi possível conectar ao backend. Confirme se a API está em execução.");
+  }
   const payload = (await response.json().catch(() => null)) as (Partial<TokenPair> & { detail?: string }) | null;
   if (!response.ok || !payload?.access) {
     throw new Error(payload?.detail ?? "Não foi possível autenticar. Confira o e-mail e a senha.");

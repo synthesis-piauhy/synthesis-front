@@ -3,9 +3,11 @@
 import { LogIn } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../providers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { api } from "@/services/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const health = useQuery({ queryKey: ["health"], queryFn: api.health, retry: false });
 
   useEffect(() => {
     if (!loading && user) router.replace("/");
@@ -39,6 +42,13 @@ export default function LoginPage() {
         <div className="mb-8 text-2xl font-semibold text-primary">synthesis</div>
         <h1 className="text-3xl font-semibold text-text">Relatos semanais</h1>
         <p className="mt-2 text-base text-muted">Entre com o usuário cadastrado no Django Admin.</p>
+        <button
+          type="button"
+          className={`mt-4 text-sm ${health.isError ? "text-danger" : "text-muted"}`}
+          onClick={() => health.isError && void health.refetch()}
+        >
+          {health.isLoading ? "Verificando conexão com a API..." : health.isError ? "API indisponível — clique para tentar novamente" : "API conectada"}
+        </button>
         <label className="mt-8 block text-sm font-medium">
           E-mail
           <Input className="mt-1" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} />

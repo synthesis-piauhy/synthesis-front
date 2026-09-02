@@ -28,12 +28,17 @@ export default function HomePage() {
     queryFn: api.getCollectionOverview,
     enabled: editorView,
   });
+  const pendingManagers = useQuery({
+    queryKey: ["pendingManagers"],
+    queryFn: api.getPendingManagers,
+    enabled: editorView,
+  });
 
-  if (cycles.isLoading || reports.isLoading || (editorView && overview.isLoading)) {
+  if (cycles.isLoading || reports.isLoading || (editorView && (overview.isLoading || pendingManagers.isLoading))) {
     return <AppShell><div className="rounded-app border border-border bg-white p-6">Carregando situação da coleta.</div></AppShell>;
   }
-  if (cycles.isError || reports.isError || (editorView && overview.isError)) {
-    return <AppShell><ErrorState onRetry={() => { void cycles.refetch(); void reports.refetch(); void overview.refetch(); }} /></AppShell>;
+  if (cycles.isError || reports.isError || (editorView && (overview.isError || pendingManagers.isError))) {
+    return <AppShell><ErrorState onRetry={() => { void cycles.refetch(); void reports.refetch(); void overview.refetch(); void pendingManagers.refetch(); }} /></AppShell>;
   }
   if (!cycle) return <AppShell><EmptyState description="Nenhum ciclo semanal foi cadastrado." /></AppShell>;
 
@@ -41,7 +46,7 @@ export default function HomePage() {
   const hasSubmitted = mine.length > 0;
   const stats = overview.data ? [
     ["Gestores que enviaram", overview.data.submittedManagers.length],
-    ["Gestores pendentes", overview.data.pendingManagers.length],
+    ["Gestores pendentes", pendingManagers.data?.length ?? 0],
     ["Relatos recebidos", overview.data.totalReports],
     ["Estado do relatório", reportStatusLabel(overview.data.reportStatus)],
   ] : [];
@@ -69,7 +74,9 @@ export default function HomePage() {
             </div>
             <div className="rounded-app border border-border bg-white p-4">
               <h2 className="text-lg font-semibold">Gestores pendentes</h2>
-              <ul className="mt-3 space-y-2 text-sm text-muted">{overview.data.pendingManagers.map((item) => <li key={item.id}>{item.name} · {item.area}</li>)}</ul>
+              {pendingManagers.data?.length ? (
+                <ul className="mt-3 space-y-2 text-sm text-muted">{pendingManagers.data.map((item) => <li key={item.id}>{item.name} · {item.area}</li>)}</ul>
+              ) : <p className="mt-3 text-sm text-muted">Todos os gestores enviaram ao menos um relato.</p>}
               <Link className="mt-4 inline-flex min-h-10 items-center justify-center rounded-app bg-primary px-4 py-2 text-sm font-medium text-white" href="/relatorio-semanal/selecao">
                 Iniciar seleção
               </Link>

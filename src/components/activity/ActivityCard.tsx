@@ -8,7 +8,7 @@ export function ActivityCard({ report, manager }: { report: ActivityReport; mana
   const mainPhoto = report.photos.find((photo) => photo.isMain) ?? report.photos[0];
   return (
     <Link href={`/relatos/${report.id}`} className="block overflow-hidden rounded-app border border-border bg-white shadow-subtle transition hover:border-secondary">
-      <Image src={mainPhoto.url} alt={mainPhoto.alt} width={520} height={280} className="h-44 w-full object-cover" />
+      <Image src={mainPhoto.url} alt={mainPhoto.alt} width={520} height={280} className="h-44 w-full object-cover" unoptimized />
       <div className="space-y-3 p-4">
         <div className="flex flex-wrap gap-2">
           <Badge>{report.area}</Badge>

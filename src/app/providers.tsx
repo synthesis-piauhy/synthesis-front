@@ -3,7 +3,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api } from "@/services/api";
-import { clearSession, hasSession, loginWithPassword } from "@/services/auth";
+import { clearSession, hasSession, loginWithPassword, refreshSession, verifyAccessToken } from "@/services/auth";
 import { queryClient } from "@/services/queries";
 import type { User, UserRole } from "@/types";
 
@@ -34,6 +34,7 @@ export function Providers({ children }: { children: ReactNode }) {
         return;
       }
       try {
+        if (!(await verifyAccessToken())) await refreshSession();
         setUser(await api.getAuthenticatedUser());
       } catch {
         logout();

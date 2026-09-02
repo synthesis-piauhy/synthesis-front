@@ -1,12 +1,12 @@
 import { AlertTriangle } from "lucide-react";
 import { Button } from "./ui/button";
 
-export function ErrorState({ onRetry }: { onRetry?: () => void }) {
+export function ErrorState({ onRetry, message = "Não foi possível carregar as informações." }: { onRetry?: () => void; message?: string }) {
   return (
     <div className="rounded-app border border-danger bg-white p-6 text-sm text-text">
       <div className="flex items-center gap-2 font-semibold text-danger">
         <AlertTriangle size={18} aria-hidden />
-        Não foi possível carregar as informações.
+        {message}
       </div>
       {onRetry ? (
         <Button className="mt-4" variant="outline" onClick={onRetry}>

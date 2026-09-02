@@ -13,8 +13,19 @@ export const activitySchema = z.object({
   beneficiaries: z.string().min(2, "Informe o público beneficiado."),
   area: z.string().min(1, "Informe a área."),
   managerId: z.string().min(1, "Informe o gestor responsável."),
-  mainPhoto: fileSchema.refine(validImage, "Use imagem PNG, JPG, WEBP ou SVG com até 5 MB."),
-  additionalPhotos: z.array(fileSchema.refine(validImage, "Use imagem PNG, JPG, WEBP ou SVG com até 5 MB.")),
+  mainPhoto: fileSchema.refine(validImage, "Use imagem PNG, JPG ou WEBP com até 5 MB."),
+  additionalPhotos: z.array(fileSchema.refine(validImage, "Use imagem PNG, JPG ou WEBP com até 5 MB.")),
 });
 
 export type ActivityFormValues = z.infer<typeof activitySchema>;
+
+export const activityEditSchema = activitySchema.pick({
+  title: true,
+  date: true,
+  location: true,
+  summary: true,
+  result: true,
+  beneficiaries: true,
+});
+
+export type ActivityEditValues = z.infer<typeof activityEditSchema>;

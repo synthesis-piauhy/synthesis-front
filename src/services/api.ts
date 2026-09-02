@@ -16,6 +16,7 @@ export type ActivityInput = Omit<ActivityReport, "id" | "photos" | "createdAt" |
 };
 
 export type SynthesisApi = {
+  health(): Promise<{ detail: string }>;
   getAuthenticatedUser(role?: string): Promise<User>;
   listAreas(): Promise<Area[]>;
   listUsers(): Promise<User[]>;
@@ -25,7 +26,7 @@ export type SynthesisApi = {
   createActivityReport(input: ActivityInput): Promise<ActivityReport>;
   updateOwnActivityReport(id: string, input: Partial<ActivityReport>): Promise<ActivityReport>;
   getCollectionOverview(): Promise<CollectionOverview>;
-  reopenCollection(reason: string, newDeadline: string): Promise<WeeklyCycle>;
+  reopenCollection(cycleId: string, reason: string, newDeadline: string): Promise<WeeklyCycle>;
   getPendingManagers(): Promise<User[]>;
   generateDraft(cycleId: string, activityIds: string[]): Promise<WeeklyReport>;
   updateReportCard(reportId: string, cardId: string, changes: Partial<ReportCard>): Promise<ReportCard>;
@@ -48,7 +49,16 @@ export class ApiError extends Error {
 }
 
 function errorMessage(payload: unknown) {
-  if (payload && typeof payload === "object" && "detail" in payload && typeof payload.detail === "string") return payload.detail;
+  if (payload && typeof payload === "object" && "detail" in payload) {
+    if (typeof payload.detail === "string") return payload.detail;
+    if (Array.isArray(payload.detail)) {
+      const messages = payload.detail
+        .map((item) => item && typeof item === "object" && "msg" in item ? String(item.msg) : "")
+        .filter(Boolean);
+      if (messages.length) return messages.join(" ");
+    }
+  }
+  if (typeof payload === "string" && payload.trim()) return payload;
   return "Não foi possível concluir a solicitação.";
 }
 
@@ -58,7 +68,12 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
   if (token) headers.set("Authorization", `Bearer ${token}`);
   if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
 
-  const response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers });
+  } catch {
+    throw new ApiError("Não foi possível conectar ao backend. Confirme se a API está em execução.", 0);
+  }
   if (response.status === 401 && retry) {
     try {
       await refreshSession();
@@ -90,6 +105,7 @@ const queryString = (filters?: Record<string, string | undefined>) => {
 };
 
 export const httpApi: SynthesisApi = {
+  health: () => request<{ detail: string }>("/health"),
   getAuthenticatedUser: () => request<User>("/me"),
   listAreas: () => request<Area[]>("/areas"),
   listUsers: () => request<User[]>("/users"),
@@ -121,11 +137,8 @@ export const httpApi: SynthesisApi = {
     return request<ActivityReport>(`/activity-reports/${id}`, { method: "PATCH", body: JSON.stringify(body) });
   },
   getCollectionOverview: () => request<CollectionOverview>("/collection/overview"),
-  reopenCollection: async (reason, newDeadline) => {
-    const allCycles = await request<WeeklyCycle[]>("/cycles");
-    const cycle = allCycles.find((item) => item.status === "aberta" || item.status === "reaberta") ?? allCycles[0];
-    if (!cycle) throw new Error("Nenhum ciclo cadastrado.");
-    return request<WeeklyCycle>(`/cycles/${cycle.id}/reopen`, {
+  reopenCollection: (cycleId, reason, newDeadline) => {
+    return request<WeeklyCycle>(`/cycles/${cycleId}/reopen`, {
       method: "POST",
       body: JSON.stringify({ reason, newDeadline }),
     });
@@ -168,6 +181,7 @@ let reports = clone(activityReports);
 let weekly = clone(weeklyReports);
 
 export const mockApi: SynthesisApi = {
+  health: async () => delay({ detail: "ok" }),
   getAuthenticatedUser: async (role = "gestor") => delay(clone(users.find((item) => item.role === role) ?? users[0])),
   listAreas: async () => delay(clone(areas)),
   listUsers: async () => delay(clone(users)),
@@ -192,7 +206,10 @@ export const mockApi: SynthesisApi = {
     return delay(clone(updated));
   },
   getCollectionOverview: async () => delay(clone(overview)),
-  reopenCollection: async (_reason, newDeadline) => delay({ ...cycles[0], status: "reaberta", deadline: newDeadline }),
+  reopenCollection: async (cycleId, _reason, newDeadline) => {
+    const cycle = cycles.find((item) => item.id === cycleId) ?? cycles[0];
+    return delay({ ...cycle, status: "reaberta", deadline: newDeadline });
+  },
   getPendingManagers: async () => delay(clone(overview.pendingManagers)),
   generateDraft: async (cycleId, activityIds) => {
     const selected = reports.filter((report) => activityIds.includes(report.id));
