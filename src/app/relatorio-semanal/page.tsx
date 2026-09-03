@@ -27,7 +27,7 @@ export default function WeeklyReportPage() {
   return (
     <AppShell>
       <RoleGuard allowed={["gerente"]} fallback={<EmptyState title="Acesso restrito" description="O relatório editorial é exclusivo da gerente." />}>
-        <PageHeader title="Relatório semanal" description="Há no máximo um relatório editorial por ciclo semanal." />
+        <PageHeader title="Mosaico semanal" description="Acompanhe a entrega que reúne os relatos selecionados em um único relatório visual." />
         <div className="mb-5 max-w-xs"><WeekSelector value={selectedCycleId} onChange={setCycleId} /></div>
         {reports.isError || cycles.isError ? <ErrorState onRetry={() => { void reports.refetch(); void cycles.refetch(); }} /> : null}
         {!current && !reports.isLoading ? (
@@ -65,4 +65,3 @@ export default function WeeklyReportPage() {
     </AppShell>
   );
 }
-

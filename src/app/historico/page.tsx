@@ -26,7 +26,7 @@ export default function HistoryPage() {
   return (
     <AppShell>
       <RoleGuard allowed={["gerente"]} fallback={<EmptyState title="Acesso restrito" description="O histórico editorial é exclusivo da gerente." />}>
-        <PageHeader title="Histórico" description="Consulte relatórios semanais anteriores e todas as versões geradas." />
+        <PageHeader title="Histórico e PDFs" description="Consulte os mosaicos anteriores e todas as versões geradas." />
         <div className="mb-4 max-w-xs">
           <WeekSelector value={selectedCycleId} onChange={setCycleId} />
         </div>
@@ -37,7 +37,7 @@ export default function HistoryPage() {
             const label = cycles.data?.find((cycle) => cycle.id === report.cycleId)?.label ?? report.cycleId;
             return (
               <article key={report.id} className="rounded-app border border-border bg-white p-4 shadow-subtle">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                   <div>
                     <h2 className="text-lg font-semibold">{label}</h2>
                     <p className="text-sm text-muted">
@@ -45,7 +45,7 @@ export default function HistoryPage() {
                     </p>
                     <p className="text-sm text-muted">Cada PDF gerado permanece imutável e disponível para consulta.</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex w-full flex-wrap gap-2 sm:w-auto">
                     <Link className="inline-flex min-h-10 items-center gap-2 rounded-app border border-border bg-white px-4 py-2 text-sm font-medium" href={`/relatorios/${report.id}`}>
                       <Eye size={16} />Visualizar
                     </Link>
@@ -62,4 +62,3 @@ export default function HistoryPage() {
     </AppShell>
   );
 }
-

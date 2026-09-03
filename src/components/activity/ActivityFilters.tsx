@@ -1,6 +1,6 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
+import { Filter, RotateCcw, Search } from "lucide-react";
 import type { Area, User } from "@/types";
 import { Button } from "../ui/button";
 import { Select } from "../ui/select";
@@ -54,7 +54,9 @@ export function ActivityFilters({
 }) {
   const patch = (changes: Partial<ActivityFilterValue>) => onChange({ ...value, ...changes });
   return (
-    <section className="mb-5 grid gap-3 rounded-app border border-border bg-white p-4 shadow-subtle md:grid-cols-3 xl:grid-cols-6">
+    <section className="mb-6 rounded-app border border-border bg-white p-4 shadow-subtle sm:p-5">
+      <div className="mb-4 flex items-center gap-2"><span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary"><Filter size={16} /></span><div><h2 className="text-sm font-semibold text-text">Filtrar relatos</h2><p className="text-xs text-muted">Refine os resultados da semana selecionada</p></div></div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
       {showScope ? (
         <label className="text-sm font-medium">
           Escopo
@@ -90,7 +92,7 @@ export function ActivityFilters({
       </label>
       <label className="text-sm font-medium">
         Buscar
-        <Input className="mt-1" type="search" placeholder="Título ou local" value={value.search} onChange={(event) => patch({ search: event.target.value })} />
+        <div className="relative mt-1"><Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} /><Input className="pl-9" type="search" placeholder="Título ou local" value={value.search} onChange={(event) => patch({ search: event.target.value })} /></div>
       </label>
       <div className="flex items-end">
         <Button type="button" variant="outline" className="w-full" onClick={() => onChange(emptyActivityFilters)}>
@@ -98,7 +100,7 @@ export function ActivityFilters({
           Limpar filtros
         </Button>
       </div>
+      </div>
     </section>
   );
 }
-

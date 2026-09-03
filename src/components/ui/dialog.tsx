@@ -19,8 +19,8 @@ export function Dialog({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-[#243746]/35" />
-        <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-50 w-[min(92vw,560px)] -translate-x-1/2 -translate-y-1/2 rounded-app border border-border bg-white p-5 shadow-subtle">
+        <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-text/40 backdrop-blur-sm data-[state=closed]:animate-out data-[state=open]:animate-in" />
+        <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[min(92vw,560px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-app-lg border border-border bg-surface p-5 shadow-raised">
           <div className="mb-4 flex items-center justify-between gap-4">
             <DialogPrimitive.Title className="text-lg font-semibold text-text">{title}</DialogPrimitive.Title>
             <DialogPrimitive.Close asChild>

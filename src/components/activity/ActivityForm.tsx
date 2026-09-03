@@ -12,6 +12,7 @@ import { currentCycle } from "@/lib/cycles";
 import type { Area } from "@/types";
 import { Button } from "../ui/button";
 import { Input, Textarea } from "../ui/input";
+import { FieldMessage } from "../ui/field-message";
 import { activitySchema, type ActivityFormValues } from "./activitySchema";
 import { PhotoUploader } from "./PhotoUploader";
 
@@ -93,25 +94,25 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
         </div>
       ) : null}
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="text-sm font-medium">
+        <label htmlFor="activity-title" className="text-sm font-medium">
           Título da atividade
-          <Input className="mt-1" {...form.register("title")} />
-          {error("title") ? <span className="text-sm text-danger">{error("title")}</span> : null}
+          <Input id="activity-title" className="mt-1" aria-invalid={Boolean(error("title"))} aria-describedby={error("title") ? "activity-title-error" : undefined} {...form.register("title")} />
+          <FieldMessage id="activity-title-error">{error("title")}</FieldMessage>
         </label>
-        <label className="text-sm font-medium">
+        <label htmlFor="activity-date" className="text-sm font-medium">
           Data
-          <Input className="mt-1" type="date" min={cycle?.startsAt} max={cycle?.endsAt} {...form.register("date")} />
-          {error("date") ? <span className="text-sm text-danger">{error("date")}</span> : null}
+          <Input id="activity-date" className="mt-1" type="date" min={cycle?.startsAt} max={cycle?.endsAt} aria-invalid={Boolean(error("date"))} aria-describedby={error("date") ? "activity-date-error" : undefined} {...form.register("date")} />
+          <FieldMessage id="activity-date-error">{error("date")}</FieldMessage>
         </label>
-        <label className="text-sm font-medium">
+        <label htmlFor="activity-location" className="text-sm font-medium">
           Local
-          <Input className="mt-1" {...form.register("location")} />
-          {error("location") ? <span className="text-sm text-danger">{error("location")}</span> : null}
+          <Input id="activity-location" className="mt-1" aria-invalid={Boolean(error("location"))} aria-describedby={error("location") ? "activity-location-error" : undefined} {...form.register("location")} />
+          <FieldMessage id="activity-location-error">{error("location")}</FieldMessage>
         </label>
-        <label className="text-sm font-medium">
+        <label htmlFor="activity-beneficiaries" className="text-sm font-medium">
           Público beneficiado
-          <Input className="mt-1" {...form.register("beneficiaries")} />
-          {error("beneficiaries") ? <span className="text-sm text-danger">{error("beneficiaries")}</span> : null}
+          <Input id="activity-beneficiaries" className="mt-1" aria-invalid={Boolean(error("beneficiaries"))} aria-describedby={error("beneficiaries") ? "activity-beneficiaries-error" : undefined} {...form.register("beneficiaries")} />
+          <FieldMessage id="activity-beneficiaries-error">{error("beneficiaries")}</FieldMessage>
         </label>
         <label className="text-sm font-medium">
           Área
@@ -122,15 +123,15 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
           <Input className="mt-1" value={user?.name ?? ""} disabled />
         </label>
       </div>
-      <label className="block text-sm font-medium">
+      <label htmlFor="activity-summary" className="block text-sm font-medium">
         Descrição resumida
-        <Textarea className="mt-1" {...form.register("summary")} />
-        {error("summary") ? <span className="text-sm text-danger">{error("summary")}</span> : null}
+        <Textarea id="activity-summary" className="mt-1" aria-invalid={Boolean(error("summary"))} aria-describedby={error("summary") ? "activity-summary-error" : undefined} {...form.register("summary")} />
+        <FieldMessage id="activity-summary-error">{error("summary")}</FieldMessage>
       </label>
-      <label className="block text-sm font-medium">
+      <label htmlFor="activity-result" className="block text-sm font-medium">
         Resultado alcançado
-        <Textarea className="mt-1" {...form.register("result")} />
-        {error("result") ? <span className="text-sm text-danger">{error("result")}</span> : null}
+        <Textarea id="activity-result" className="mt-1" aria-invalid={Boolean(error("result"))} aria-describedby={error("result") ? "activity-result-error" : undefined} {...form.register("result")} />
+        <FieldMessage id="activity-result-error">{error("result")}</FieldMessage>
       </label>
       <PhotoUploader
         label="Foto principal"
@@ -162,9 +163,9 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
         error={error("additionalPhotos")}
       />
       {createMutation.isError ? <p role="alert" className="rounded-app border border-danger p-3 text-sm text-danger">{createMutation.error.message}</p> : null}
-      <Button type="submit" disabled={createMutation.isPending || cycles.isLoading || !cycle}>
+      <Button type="submit" loading={createMutation.isPending} disabled={cycles.isLoading || !cycle}>
         <Save size={16} aria-hidden />
-        {createMutation.isPending ? "Salvando..." : "Salvar atividade"}
+        Salvar atividade
       </Button>
     </form>
   );

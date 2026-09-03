@@ -1,8 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import { X } from "lucide-react";
+import { ImagePlus, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
+
+function FilePreview({ file }: { file: File }) {
+  const [src, setSrc] = useState("");
+
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file);
+    setSrc(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+
+  return src ? <Image src={src} alt={file.name} width={240} height={140} className="h-28 w-full object-cover" unoptimized /> : <div className="h-28 animate-pulse bg-neutral-100" />;
+}
 
 export function PhotoUploader({
   label,
@@ -21,10 +34,11 @@ export function PhotoUploader({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-text">
-        {label}
+      <label className="block text-sm font-semibold text-text">
+        <span>{label}</span>
+        <span className="mt-2 flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-app border border-dashed border-secondary/40 bg-secondary/[0.035] px-4 text-center transition hover:border-accent hover:bg-accent/[0.05]"><ImagePlus className="mb-2 text-secondary" size={24} /><span className="text-sm font-medium text-secondary">Clique para selecionar {multiple ? "imagens" : "uma imagem"}</span><span className="mt-1 text-xs font-normal text-muted">PNG, JPG ou WebP</span></span>
         <input
-          className="mt-1 block w-full rounded-app border border-border bg-white px-3 py-2 text-sm"
+          className="sr-only"
           type="file"
           accept="image/png,image/jpeg,image/webp"
           multiple={multiple}
@@ -36,7 +50,7 @@ export function PhotoUploader({
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
           {files.map((file, index) => (
             <div key={`${file.name}-${index}`} className="relative overflow-hidden rounded-app border border-border bg-white">
-              <Image src={URL.createObjectURL(file)} alt={file.name} width={240} height={140} className="h-28 w-full object-cover" unoptimized />
+              <FilePreview file={file} />
               <Button aria-label={`Remover ${file.name}`} type="button" variant="danger" className="absolute right-2 top-2 h-8 w-8 px-0" onClick={() => onRemove(index)}>
                 <X size={15} />
               </Button>

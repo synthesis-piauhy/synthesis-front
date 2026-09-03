@@ -72,7 +72,7 @@ describe("Administração", () => {
     mount();
     await user.click(await screen.findByRole("button", { name: "Excluir Maria" }));
     expect(administration.remove).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "Excluir", exact: true }));
+    await user.click(screen.getByRole("button", { name: /^Excluir$/ }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Registro em uso");
     expect(screen.getByRole("dialog")).toBeVisible();
   });
@@ -86,7 +86,7 @@ describe("Administração", () => {
     expect(screen.queryByRole("button", { name: "Editar Maria" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Excluir Maria" })).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole("textbox", { name: "Buscar Usuários" }), { target: { value: "Maria" } });
-    fireEvent.click(screen.getByRole("button", { name: "Buscar", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: /^Buscar$/ }));
     await waitFor(() => expect(administration.list).toHaveBeenCalledWith("users", "Maria", 1));
   });
 });

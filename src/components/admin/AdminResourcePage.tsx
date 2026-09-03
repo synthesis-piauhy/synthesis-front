@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { RoleGuard } from "@/components/RoleGuard";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
+import { LoadingState } from "@/components/LoadingState";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -106,12 +107,12 @@ export function AdminResourcePage({ resourceKey }: { resourceKey: string }) {
         <Link href="/administracao" className="mb-4 inline-block text-sm text-secondary hover:underline">← Administração</Link>
         <PageHeader title={resource?.title ?? "Administração"} description={adminDescriptions[resourceKey] ?? "Consulta administrativa."}
           actions={resource?.canCreate ? <Button onClick={() => open(undefined, "create")}>Novo cadastro</Button> : undefined} />
-        {notice ? <p role="status" className="mb-4 rounded-app border border-success bg-white p-3 text-sm text-success">{notice}</p> : null}
+        {notice ? <p role="status" className="mb-4 rounded-app border border-success/20 bg-success/[0.06] p-3 text-sm font-medium text-success">{notice}</p> : null}
         {resources.isError ? <ErrorState message={resources.error.message} onRetry={() => void resources.refetch()} /> : null}
-        {resources.isLoading || list.isLoading ? <p role="status" className="p-4 text-muted">Carregando registros...</p> : null}
+        {resources.isLoading || list.isLoading ? <LoadingState label="Carregando registros" /> : null}
         {resource ? <>
-          <form onSubmit={(event) => { event.preventDefault(); setPage(1); setQuery(search.trim()); }} className="mb-4 flex flex-wrap gap-2">
-            <Input className="max-w-md" aria-label={`Buscar ${resource.title}`} placeholder="Buscar por nome ou descrição" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <form onSubmit={(event) => { event.preventDefault(); setPage(1); setQuery(search.trim()); }} className="mb-5 flex flex-col gap-2 rounded-app border border-border bg-surface p-3 shadow-subtle sm:flex-row">
+            <Input className="max-w-md shadow-none" aria-label={`Buscar ${resource.title}`} placeholder="Buscar por nome ou descrição" value={search} onChange={(event) => setSearch(event.target.value)} />
             <Button type="submit" variant="outline">Buscar</Button>
             {query ? <Button type="button" variant="ghost" onClick={() => { setSearch(""); setQuery(""); setPage(1); }}>Limpar busca</Button> : null}
           </form>
@@ -119,13 +120,13 @@ export function AdminResourcePage({ resourceKey }: { resourceKey: string }) {
           {(resourceKey === "groups" && !resource.canCreate) ? <p className="mb-4 text-sm text-muted">A alteração de grupos e permissões técnicas exige acesso de superusuário.</p> : null}
           {list.isError ? <ErrorState message={list.error.message} onRetry={() => void list.refetch()} /> : null}
           {list.data && !list.data.items.length ? <EmptyState description={query ? "Nenhum resultado para esta busca." : "Nenhum registro cadastrado."} /> : null}
-          {list.data?.items.length ? <div className="overflow-x-auto rounded-app border border-border bg-white shadow-subtle">
-            <table className="w-full text-left text-sm">
+          {list.data?.items.length ? <div className="overflow-x-auto rounded-app border border-border bg-surface shadow-subtle">
+            <table className="min-w-[720px] w-full text-left text-sm">
               <caption className="sr-only">{resource.title}</caption>
-              <thead className="bg-page text-muted"><tr>{resource.columns.map((column) => <th scope="col" className="p-3" key={column.value}>{column.label}</th>)}<th scope="col" className="p-3">Ações</th></tr></thead>
-              <tbody>{list.data.items.map((record) => <tr className="border-t border-border" key={record.id}>
-                {resource.columns.map((column) => <td className="max-w-xs p-3 align-top" key={column.value}><span className="line-clamp-3 break-words">{displayValue(record.display[column.value])}</span></td>)}
-                <td className="p-3 align-top"><div className="flex flex-wrap gap-1">
+              <thead className="bg-neutral-50 text-xs font-semibold uppercase tracking-wide text-muted"><tr>{resource.columns.map((column) => <th scope="col" className="px-4 py-3" key={column.value}>{column.label}</th>)}<th scope="col" className="sticky right-0 bg-neutral-50 px-4 py-3">Ações</th></tr></thead>
+              <tbody>{list.data.items.map((record) => <tr className="border-t border-border transition hover:bg-neutral-50/70" key={record.id}>
+                {resource.columns.map((column) => <td className="max-w-xs px-4 py-3.5 align-top" key={column.value}><span className="line-clamp-3 break-words">{displayValue(record.display[column.value])}</span></td>)}
+                <td className="sticky right-0 bg-surface px-4 py-3 align-top"><div className="flex flex-wrap gap-1">
                   <Button variant="ghost" onClick={() => open(record, "view")} aria-label={`Ver ${record.label}`}>Detalhes</Button>
                   {record.canEdit ? <Button variant="outline" onClick={() => open(record, "edit")} aria-label={`Editar ${record.label}`}>Editar</Button> : null}
                   {record.canDelete ? <Button variant="ghost" className="text-danger" onClick={() => { remove.reset(); setDeleteRecord(record); }} aria-label={`Excluir ${record.label}`}>Excluir</Button> : null}
@@ -155,7 +156,7 @@ export function AdminResourcePage({ resourceKey }: { resourceKey: string }) {
                   <AdminFields fields={resource.fields} values={values} creating={selection.mode === "create"} onChange={(name, value) => setValues((current) => ({ ...current, [name]: value }))} />
                 </fieldset>
                 {save.isError ? <p role="alert" className="mt-4 rounded-app border border-danger p-3 text-sm text-danger">{save.error.message}</p> : null}
-                <div className="mt-5 flex justify-end gap-2"><Button type="button" variant="outline" disabled={save.isPending} onClick={() => setSelection(undefined)}>Cancelar</Button><Button type="submit" disabled={save.isPending}>{save.isPending ? "Salvando..." : "Salvar"}</Button></div>
+                <div className="mt-5 flex justify-end gap-2"><Button type="button" variant="outline" disabled={save.isPending} onClick={() => setSelection(undefined)}>Cancelar</Button><Button type="submit" loading={save.isPending}>Salvar</Button></div>
               </form> : <p role="alert">Você não pode editar este registro.</p>
             ) : null}
           </div>
@@ -163,7 +164,7 @@ export function AdminResourcePage({ resourceKey }: { resourceKey: string }) {
         <Dialog open={Boolean(deleteRecord)} onOpenChange={(isOpen) => { if (!isOpen && !remove.isPending) setDeleteRecord(undefined); }} title="Excluir cadastro">
           <p className="text-sm">Excluir <strong>{deleteRecord?.label}</strong>? Esta ação não pode ser desfeita. Cadastros vinculados ao histórico serão preservados.</p>
           {remove.isError ? <p role="alert" className="mt-4 rounded-app border border-danger p-3 text-sm text-danger">{remove.error.message}</p> : null}
-          <div className="mt-5 flex justify-end gap-2"><Button variant="outline" disabled={remove.isPending} onClick={() => setDeleteRecord(undefined)}>Cancelar</Button><Button variant="danger" disabled={remove.isPending} onClick={() => remove.mutate()}>{remove.isPending ? "Excluindo..." : "Excluir"}</Button></div>
+          <div className="mt-5 flex justify-end gap-2"><Button variant="outline" disabled={remove.isPending} onClick={() => setDeleteRecord(undefined)}>Cancelar</Button><Button variant="danger" loading={remove.isPending} onClick={() => remove.mutate()}>Excluir</Button></div>
         </Dialog>
       </RoleGuard>
     </AppShell>

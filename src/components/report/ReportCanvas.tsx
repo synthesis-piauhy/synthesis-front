@@ -29,7 +29,7 @@ export function ReportCanvas({
 
   return (
     <DndContext onDragEnd={handleDragEnd}>
-      <div className="flex min-h-[760px] justify-center overflow-auto rounded-app border border-border bg-[#EDF2F5] p-6">
+      <div className="flex min-h-[760px] justify-center overflow-auto rounded-app border border-border bg-neutral-100 p-6">
         <ReportPage page={1} cycleLabel={cycleLabel} sections={sections} activities={activities} selectedCardId={selectedCardId} onSelect={onSelectCard} />
       </div>
     </DndContext>

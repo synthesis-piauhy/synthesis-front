@@ -46,7 +46,7 @@ export const adminDescriptions: Record<string, string> = {
   permissions: "Consulte as permissões técnicas disponíveis para atribuição a usuários e grupos.",
   activities: "Consulte os relatos originais, autores, áreas e ciclos.",
   photos: "Consulte as imagens enviadas e os relatos aos quais pertencem.",
-  reports: "Consulte os relatórios semanais e sua seleção editorial.",
+  reports: "Acompanhe o relatório mosaico que reúne os relatos selecionados em uma única entrega.",
   sections: "Consulte a organização dos relatórios por área.",
   cards: "Consulte os textos editoriais, a ordem e os cards retirados.",
   versions: "Acesse os PDFs e os dados de cada versão gerada.",
