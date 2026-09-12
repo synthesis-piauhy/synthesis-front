@@ -15,14 +15,14 @@ export function ReportCard({
   selected?: boolean;
   onSelect?: () => void;
 }) {
-  const sortable = useSortable({ id: card.id });
+  const { setNodeRef, transform, transition, attributes, listeners } = useSortable({ id: card.id });
   const photo = activity?.photos.find((item) => item.id === card.selectedPhotoId) ?? activity?.photos[0];
   return (
     <button
-      ref={sortable.setNodeRef}
-      style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}
-      {...sortable.attributes}
-      {...sortable.listeners}
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      {...attributes}
+      {...listeners}
       onClick={onSelect}
       className={cn(
         "break-inside-avoid rounded-app border bg-white p-2 text-left shadow-subtle",

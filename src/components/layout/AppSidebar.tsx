@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Archive, FilePlus2, Files, LayoutGrid, ListChecks, Home, LogOut, Settings, X, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/app/providers";
@@ -34,6 +35,8 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
   const pathname = usePathname();
   const router = useRouter();
   const { user, role, logout } = useAuth();
+  const [logoutError, setLogoutError] = useState("");
+  const [leaving, setLeaving] = useState(false);
 
   function renderItem(item: NavigationItem, nested = false) {
     const active = item.active(pathname);
@@ -94,16 +97,21 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
           <div className="min-w-0"><div className="truncate font-semibold text-white">{user?.name ?? "Carregando"}</div><div className="truncate text-xs text-white/55">{user?.area ?? "Área"} · {role}</div></div>
         </div>
         <Button
+          disabled={leaving}
           variant="outline"
           className="w-full justify-start border-white/15 bg-transparent text-white hover:border-white/30 hover:bg-white/10"
-          onClick={() => {
-            logout();
-            router.replace("/login");
+          onClick={async () => {
+            setLeaving(true);
+            setLogoutError("");
+            try { await logout(); router.replace("/login"); }
+            catch (error) { setLogoutError((error as Error).message); }
+            finally { setLeaving(false); }
           }}
         >
           <LogOut size={16} aria-hidden />
           Sair
         </Button>
+        {logoutError ? <p role="alert" className="mt-2 text-sm">{logoutError}</p> : null}
       </div>
       </aside>
     </>

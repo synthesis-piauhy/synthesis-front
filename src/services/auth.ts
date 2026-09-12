@@ -1,88 +1,60 @@
-const ACCESS_TOKEN_KEY = "synthesis.accessToken";
-const REFRESH_TOKEN_KEY = "synthesis.refreshToken";
+export const apiBaseUrl = (process.env.NODE_ENV === "production"
+  ? "/api"
+  : (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api")).replace(/\/$/, "");
 
-export const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api").replace(/\/$/, "");
+let csrfToken = "";
+let sessionEpoch = 0;
 
-type TokenPair = {
-  access: string;
-  refresh: string;
-};
-
-function storage() {
-  return typeof window === "undefined" ? null : window.localStorage;
-}
-
-export function getAccessToken() {
-  return storage()?.getItem(ACCESS_TOKEN_KEY) ?? null;
-}
-
-export async function verifyAccessToken() {
-  const token = getAccessToken();
-  if (!token) return false;
-  const response = await fetch(`${apiBaseUrl}/token/verify`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token }),
-  });
-  return response.ok;
-}
-
-export function hasSession() {
-  return Boolean(storage()?.getItem(REFRESH_TOKEN_KEY));
-}
+export function getSessionEpoch() { return sessionEpoch; }
 
 export function clearSession() {
-  storage()?.removeItem(ACCESS_TOKEN_KEY);
-  storage()?.removeItem(REFRESH_TOKEN_KEY);
+  sessionEpoch += 1;
+  csrfToken = "";
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem("synthesis.accessToken");
+    window.localStorage.removeItem("synthesis.refreshToken");
+  }
 }
 
-function storeTokens(tokens: TokenPair) {
-  storage()?.setItem(ACCESS_TOKEN_KEY, tokens.access);
-  storage()?.setItem(REFRESH_TOKEN_KEY, tokens.refresh);
+export async function getCsrfToken() {
+  const cookie = typeof document !== "undefined"
+    ? document.cookie.split("; ").find((item) => item.startsWith("csrftoken="))?.slice(10) : undefined;
+  if (cookie) return decodeURIComponent(cookie);
+  if (csrfToken) return csrfToken;
+  const response = await fetch(`${apiBaseUrl}/token/csrf`, { credentials: "include", cache: "no-store" });
+  if (!response.ok) throw new Error("Não foi possível iniciar uma sessão segura.");
+  const data = await response.json() as { csrfToken: string };
+  csrfToken = data.csrfToken;
+  return csrfToken;
 }
 
-async function tokenRequest(path: string, body: Record<string, string>) {
-  let response: Response;
-  try {
-    response = await fetch(`${apiBaseUrl}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    throw new Error("Não foi possível conectar ao backend. Confirme se a API está em execução.");
-  }
-  const payload = (await response.json().catch(() => null)) as (Partial<TokenPair> & { detail?: string }) | null;
-  if (!response.ok || !payload?.access) {
-    throw new Error(payload?.detail ?? "Não foi possível autenticar. Confira o e-mail e a senha.");
-  }
-  return payload;
+async function sessionRequest(path: string, body: Record<string, string> = {}) {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: "POST", credentials: "include", cache: "no-store",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": await getCsrfToken() },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => null) as { detail?: string; csrfToken?: string } | null;
+  if (!response.ok) throw new Error(payload?.detail ?? "Não foi possível concluir a autenticação.");
+  if (payload?.csrfToken) csrfToken = payload.csrfToken;
 }
 
 export async function loginWithPassword(email: string, password: string) {
-  const tokens = await tokenRequest("/token/pair", { email, password });
-  if (!tokens.refresh) throw new Error("A API não devolveu o token de renovação.");
-  storeTokens(tokens as TokenPair);
+  clearSession();
+  await sessionRequest("/token/pair", { email, password });
 }
 
-let refreshRequest: Promise<string> | null = null;
-
-export async function refreshSession() {
-  if (refreshRequest) return refreshRequest;
-  const refresh = storage()?.getItem(REFRESH_TOKEN_KEY);
-  if (!refresh) throw new Error("Sessão não encontrada.");
-
-  refreshRequest = tokenRequest("/token/refresh", { refresh })
-    .then((tokens) => {
-      storeTokens({ access: tokens.access!, refresh: tokens.refresh ?? refresh });
-      return tokens.access!;
-    })
-    .catch((error) => {
-      clearSession();
-      throw error;
-    })
-    .finally(() => {
-      refreshRequest = null;
-    });
-  return refreshRequest;
+export async function logoutSession(all = false) {
+  // Invalidate pending UI reads immediately, including those from before logout.
+  clearSession();
+  try {
+    await sessionRequest(all ? "/token/logout-all" : "/token/logout");
+  } catch {
+    throw new Error("Não foi possível confirmar a saída no servidor. Conecte-se e tente sair novamente.");
+  }
+  if (typeof BroadcastChannel !== "undefined") {
+    const channel = new BroadcastChannel("synthesis-session");
+    channel.postMessage("logout");
+    channel.close();
+  }
 }

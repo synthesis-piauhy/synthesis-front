@@ -6,7 +6,7 @@ Frontend Next.js da plataforma **synthesis**, conectado à API Django Ninja Extr
 
 ```bash
 cp .env.example .env.local
-npm install
+npm ci
 npm run dev
 ```
 
@@ -14,8 +14,9 @@ O frontend fica em `http://localhost:3000` e usa, por padrão, a API em
 `http://localhost:8000/api`. O backend deve estar executando, com as migrações
 e o comando `seed_synthesis` aplicados.
 
-Entre com o e-mail e a senha de um usuário criado no Django Admin. A aplicação
-renova o access token automaticamente enquanto o refresh token for válido.
+Entre com o e-mail e a senha de um usuário criado no Django Admin. A aplicação usa
+sessão Django em cookie `HttpOnly`, restaura a sessão após recarga e coordena logout
+entre abas. Tokens legados eventualmente existentes no `localStorage` são removidos.
 
 ## Perfis e fluxos
 
@@ -38,6 +39,10 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+O ambiente de desenvolvimento e a CI usam Node 22, registrado em `.nvmrc`. Em produção,
+o frontend e a API devem ficar sob a mesma origem HTTPS; veja a documentação de implantação
+do backend para o exemplo com Nginx e o artefato standalone do Next.
 
 ## Administração
 

@@ -9,7 +9,7 @@ import type {
   WeeklyReport,
 } from "@/types";
 import { activityReports, areas, cycles, overview, users, weeklyReports } from "./mock-data";
-import { apiBaseUrl, clearSession, getAccessToken, refreshSession } from "./auth";
+import { apiBaseUrl, clearSession, getCsrfToken, getSessionEpoch } from "./auth";
 
 export type ActivityInput = Omit<ActivityReport, "id" | "photos" | "createdAt" | "updatedAt"> & {
   photos: File[];
@@ -48,6 +48,8 @@ export class ApiError extends Error {
   }
 }
 
+type Page<T> = { items: T[]; total: number; page: number; pageSize: number };
+
 function errorMessage(payload: unknown) {
   if (payload && typeof payload === "object" && "detail" in payload) {
     if (typeof payload.detail === "string") return payload.detail;
@@ -62,26 +64,22 @@ function errorMessage(payload: unknown) {
   return "Não foi possível concluir a solicitação.";
 }
 
-export async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const epoch = getSessionEpoch();
   const headers = new Headers(init.headers);
-  const token = getAccessToken();
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (!["GET", "HEAD", "OPTIONS"].includes(init.method ?? "GET")) headers.set("X-CSRFToken", await getCsrfToken());
   if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
 
   let response: Response;
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers });
+    response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers, credentials: "include", cache: "no-store" });
   } catch {
     throw new ApiError("Não foi possível conectar ao backend. Confirme se a API está em execução.", 0);
   }
-  if (response.status === 401 && retry) {
-    try {
-      await refreshSession();
-      return request<T>(path, init, false);
-    } catch {
-      clearSession();
-      if (typeof window !== "undefined") window.dispatchEvent(new Event("synthesis:unauthorized"));
-    }
+  if (epoch !== getSessionEpoch()) throw new ApiError("A sessão foi encerrada.", 401);
+  if (response.status === 401) {
+    clearSession();
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("synthesis:unauthorized"));
   }
 
   const text = await response.text();
@@ -104,13 +102,25 @@ const queryString = (filters?: Record<string, string | undefined>) => {
   return value ? `?${value}` : "";
 };
 
+async function listAll<T>(path: string) {
+  const separator = path.includes("?") ? "&" : "?";
+  const first = await request<Page<T>>(`${path}${separator}page=1&pageSize=100`);
+  const items = [...first.items];
+  for (let page = 2; items.length < first.total; page += 1) {
+    const next = await request<Page<T>>(`${path}${separator}page=${page}&pageSize=100`);
+    items.push(...next.items);
+    if (!next.items.length) break;
+  }
+  return items;
+}
+
 export const httpApi: SynthesisApi = {
   health: () => request<{ detail: string }>("/health"),
   getAuthenticatedUser: () => request<User>("/me"),
   listAreas: () => request<Area[]>("/areas"),
-  listUsers: () => request<User[]>("/users"),
-  listWeeklyCycles: () => request<WeeklyCycle[]>("/cycles"),
-  listActivityReports: (filters) => request<ActivityReport[]>(`/activity-reports${queryString(filters)}`),
+  listUsers: () => listAll<User>("/users"),
+  listWeeklyCycles: () => listAll<WeeklyCycle>("/cycles"),
+  listActivityReports: (filters) => listAll<ActivityReport>(`/activity-reports${queryString(filters)}`),
   getActivityReport: async (id) => {
     try {
       return await request<ActivityReport>(`/activity-reports/${id}`);
@@ -160,7 +170,7 @@ export const httpApi: SynthesisApi = {
       body: JSON.stringify({ cardIds }),
     }),
   removeReportCard: (reportId, cardId) => request<WeeklyReport>(`/weekly-reports/${reportId}/cards/${cardId}`, { method: "DELETE" }),
-  listWeeklyReports: () => request<WeeklyReport[]>("/weekly-reports"),
+  listWeeklyReports: () => listAll<WeeklyReport>("/weekly-reports"),
   getWeeklyReport: async (id) => {
     try {
       return await request<WeeklyReport>(`/weekly-reports/${id}`);
@@ -169,7 +179,7 @@ export const httpApi: SynthesisApi = {
       throw error;
     }
   },
-  listReportVersions: (reportId) => request<ReportVersion[]>(`/weekly-reports/${reportId}/versions`),
+  listReportVersions: (reportId) => listAll<ReportVersion>(`/weekly-reports/${reportId}/versions`),
   generatePdf: (reportId) => request<ReportVersion>(`/weekly-reports/${reportId}/versions`, { method: "POST" }),
   getPdfUrl: (versionId) => request<string>(`/weekly-reports/versions/${versionId}/url`),
 };

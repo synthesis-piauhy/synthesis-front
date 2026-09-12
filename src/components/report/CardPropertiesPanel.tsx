@@ -1,7 +1,7 @@
 "use client";
 
 import { RotateCcw, Trash2, Undo2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { ActivityReport, ReportCard } from "@/types";
 import { Button } from "../ui/button";
 import { Input, Textarea } from "../ui/input";
@@ -28,20 +28,18 @@ export function CardPropertiesPanel({
   onRemove: () => void;
   onUndo: () => void;
 }) {
-  const [draft, setDraft] = useState<EditorialFields>({
-    editorialTitle: "",
-    editorialSummary: "",
-    editorialResult: "",
-  });
-
-  useEffect(() => {
-    if (!card) return;
-    setDraft({
-      editorialTitle: card.editorialTitle,
-      editorialSummary: card.editorialSummary,
-      editorialResult: card.editorialResult,
-    });
-  }, [card]);
+  const [source, setSource] = useState(card);
+  const [edits, setDraft] = useState<Partial<EditorialFields>>({});
+  if (source !== card) {
+    setSource(card);
+    setDraft({});
+  }
+  const draft: EditorialFields = {
+    editorialTitle: card?.editorialTitle ?? "",
+    editorialSummary: card?.editorialSummary ?? "",
+    editorialResult: card?.editorialResult ?? "",
+    ...edits,
+  };
 
   if (!card || !activity) {
     return <aside className="rounded-app border border-border bg-white p-4 text-sm text-muted">Selecione um card para editar.</aside>;
@@ -117,4 +115,3 @@ export function CardPropertiesPanel({
     </aside>
   );
 }
-

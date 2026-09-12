@@ -9,9 +9,10 @@ function FilePreview({ file }: { file: File }) {
   const [src, setSrc] = useState("");
 
   useEffect(() => {
-    const objectUrl = URL.createObjectURL(file);
-    setSrc(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
+    const reader = new FileReader();
+    reader.onload = () => setSrc(String(reader.result));
+    reader.readAsDataURL(file);
+    return () => { reader.onload = null; reader.abort(); };
   }, [file]);
 
   return src ? <Image src={src} alt={file.name} width={240} height={140} className="h-28 w-full object-cover" unoptimized /> : <div className="h-28 animate-pulse bg-neutral-100" />;
