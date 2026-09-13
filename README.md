@@ -22,8 +22,9 @@ entre abas. Tokens legados eventualmente existentes no `localStorage` são remov
 
 - **Gestor:** cria relatos com fotos e edita somente os próprios relatos enquanto
   o ciclo estiver aberto ou reaberto.
-- **Gerente:** acompanha pendências, fecha a seleção ao gerar o rascunho, edita
-  cards sem alterar os relatos originais e gera versões imutáveis do PDF.
+- **Gerente:** abre e encerra ciclos, ajusta prazos, reabre períodos com justificativa,
+  acompanha pendências, fecha a seleção ao gerar o rascunho, edita cards sem alterar
+  os relatos originais e gera versões imutáveis do PDF.
 - **Administrador:** cria e edita usuários, áreas e ciclos, encerra e reabre a coleta,
   e consulta os registros e a auditoria. Superusuários também administram grupos e permissões técnicas.
 
@@ -31,14 +32,45 @@ As telas exibem apenas ações aceitas pelo contrato da API. Erros de permissão
 estado do ciclo e validação de domínio são apresentados usando a mensagem
 devolvida pelo backend.
 
+## Modelos de relato
+
+Novos relatos começam pela escolha de um modelo guiado: ação/evento, entrega/marco ou
+atendimento/articulação. Cada modelo adapta perguntas, exemplos e instruções, mas todos produzem os mesmos
+campos editoriais curtos. Contadores e uma prévia do card mostram o impacto do texto antes do envio.
+
+Evidência e próximo passo são opcionais e podem aparecer na síntese. Informações complementares ficam
+disponíveis para consulta no relato original, mas não são copiadas para o card nem para o PDF.
+
+## Relatório executivo
+
+O editor apresenta uma prévia em duas camadas. A primeira página reúne a leitura da semana, indicadores
+automáticos, até três destaques, pontos de atenção e prioridades. As páginas seguintes preservam o detalhe
+por área. A gerente classifica cada card e informa pedido de decisão, responsável e prazo quando aplicável;
+a interface mostra as pendências que precisam ser resolvidas antes de gerar uma nova versão do PDF.
+
+Antes da primeira versão, a gerente pode reabrir a seleção, restaurar cards retirados ou cancelar o
+rascunho. Depois da publicação essas ações destrutivas ficam bloqueadas. No MVP, a entrega é manual:
+a gerente baixa o PDF versionado, copia a mensagem padronizada e o anexa no canal institucional.
+
+## Ciclos semanais
+
+A gerente usa `/ciclos` para controlar o fluxo operacional sem acessar a administração técnica. A tela
+permite abrir o próximo ciclo, ajustar o prazo de um ciclo ativo, encerrar a coleta e reabrir um período
+encerrado com justificativa. O sistema exige o encerramento do ciclo ativo antes de abrir ou reabrir outro.
+
 ## Validação
 
 ```bash
 npm run lint
 npm run typecheck
 npm test
+npm run test:e2e
 npm run build
 ```
+
+O E2E usa Playwright, sobe um servidor Next.js isolado em `.next-e2e` e percorre o fluxo da gerente
+com dados mockados. Na primeira execução, instale o Chromium e suas bibliotecas com
+`npx playwright install --with-deps chromium` (ou prepare as dependências equivalentes na imagem de CI).
 
 O ambiente de desenvolvimento e a CI usam Node 22, registrado em `.nvmrc`. Em produção,
 o frontend e a API devem ficar sob a mesma origem HTTPS; veja a documentação de implantação

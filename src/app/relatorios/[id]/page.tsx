@@ -2,7 +2,8 @@
 
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Eye } from "lucide-react";
+import { useState } from "react";
+import { Check, Copy, Download, Eye } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { useAuth } from "@/app/providers";
 export default function ReportViewPage() {
   const params = useParams<{ id: string }>();
   const { role } = useAuth();
+  const [copied, setCopied] = useState(false);
   const enabled = role === "gerente";
   const report = useQuery({
     queryKey: ["weeklyReport", params.id],
@@ -29,7 +31,16 @@ export default function ReportViewPage() {
     enabled,
   });
   const users = useQuery({ queryKey: ["users"], queryFn: api.listUsers, enabled });
+  const cycles = useQuery({ queryKey: ["cycles"], queryFn: api.listWeeklyCycles, enabled });
   const latest = versions.data?.at(-1);
+  const cycleLabel = cycles.data?.find((cycle) => cycle.id === report.data?.cycleId)?.label ?? "semana selecionada";
+
+  async function copyDeliveryMessage() {
+    if (!latest) return;
+    await navigator.clipboard.writeText(`Segue o relatório executivo de ${cycleLabel}, versão ${latest.version}, em PDF.`);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  }
 
   return (
     <AppShell>
@@ -73,6 +84,23 @@ export default function ReportViewPage() {
                 ))}
               </div>
             </section>
+            {latest ? (
+              <section className="rounded-app border border-secondary bg-white p-5 shadow-subtle">
+                <h2 className="text-lg font-semibold">Entrega manual do MVP</h2>
+                <p className="mt-1 text-sm text-muted">A distribuição é controlada pela gerente nesta primeira versão do produto.</p>
+                <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm text-text">
+                  <li>Baixe a versão {latest.version}, que é imutável.</li>
+                  <li>Copie a mensagem padronizada abaixo.</li>
+                  <li>Anexe o PDF no canal institucional autorizado e registre o envio.</li>
+                </ol>
+                <div className="mt-4 rounded-app bg-page p-3 text-sm">Segue o relatório executivo de {cycleLabel}, versão {latest.version}, em PDF.</div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button onClick={() => void downloadReportPdf(latest.id, `synthesis-relatorio-v${latest.version}.pdf`)}><Download size={16} />Baixar PDF para entrega</Button>
+                  <Button variant="outline" onClick={() => void copyDeliveryMessage()}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Mensagem copiada" : "Copiar mensagem"}</Button>
+                </div>
+                <p className="mt-3 text-xs text-muted">Não encaminhe o endereço desta tela: ele exige sessão de gerente. Envie o arquivo PDF baixado.</p>
+              </section>
+            ) : null}
           </div>
         ) : !report.isLoading ? (
           <EmptyState description="Relatório não encontrado." />
@@ -83,4 +111,3 @@ export default function ReportViewPage() {
     </AppShell>
   );
 }
-

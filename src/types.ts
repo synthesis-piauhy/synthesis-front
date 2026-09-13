@@ -4,6 +4,7 @@ export type Area = string;
 
 export type CollectionStatus = "aberta" | "encerrada" | "reaberta";
 export type ReportStatus = "nao_iniciado" | "em_selecao" | "rascunho" | "em_edicao" | "pdf_gerado";
+export type ExecutiveClassification = "informativo" | "destaque" | "atencao";
 
 export type User = {
   id: string;
@@ -33,12 +34,17 @@ export type ActivityPhoto = {
 
 export type ActivityReport = {
   id: string;
+  templateKey: string;
+  templateVersion: number;
   title: string;
   date: string;
   location: string;
   summary: string;
   result: string;
   beneficiaries: string;
+  evidence: string;
+  nextStep: string;
+  internalNotes: string;
   area: Area;
   managerId: string;
   cycleId: string;
@@ -53,9 +59,19 @@ export type ReportCard = {
   editorialTitle: string;
   editorialSummary: string;
   editorialResult: string;
+  editorialEvidence: string;
+  editorialNextStep: string;
+  executiveClassification: ExecutiveClassification;
+  needsDecision: boolean;
+  decisionRequest: string;
+  nextStepOwner: string;
+  nextStepDueDate: string | null;
   selectedPhotoId: string;
   area: Area;
   originalDate: string;
+  originalLocation: string;
+  originalBeneficiaries: string;
+  originalManagerName: string;
   order: number;
   removed: boolean;
 };
@@ -64,6 +80,7 @@ export type ReportSection = {
   id: string;
   area: Area;
   title: string;
+  executiveSummary: string;
   order: number;
   cards: ReportCard[];
 };
@@ -80,6 +97,7 @@ export type WeeklyReport = {
   id: string;
   cycleId: string;
   status: ReportStatus;
+  executiveSummary: string;
   selectedActivityIds: string[];
   sections: ReportSection[];
   versions: ReportVersion[];

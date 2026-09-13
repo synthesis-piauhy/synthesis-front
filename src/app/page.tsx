@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, CircleAlert, ClipboardList, FilePlus2, FileText, Users } from "lucide-react";
+import { ArrowRight, CalendarRange, CheckCircle2, CircleAlert, ClipboardList, FilePlus2, FileText, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/PageHeader";
@@ -26,12 +26,12 @@ export default function HomePage() {
   const overview = useQuery({
     queryKey: ["overview"],
     queryFn: api.getCollectionOverview,
-    enabled: editorView,
+    enabled: editorView && Boolean(cycle),
   });
   const pendingManagers = useQuery({
     queryKey: ["pendingManagers"],
     queryFn: api.getPendingManagers,
-    enabled: editorView,
+    enabled: editorView && Boolean(cycle),
   });
 
   if (cycles.isLoading || reports.isLoading || (editorView && (overview.isLoading || pendingManagers.isLoading))) {
@@ -40,7 +40,7 @@ export default function HomePage() {
   if (cycles.isError || reports.isError || (editorView && (overview.isError || pendingManagers.isError))) {
     return <AppShell><ErrorState onRetry={() => { void cycles.refetch(); void reports.refetch(); void overview.refetch(); void pendingManagers.refetch(); }} /></AppShell>;
   }
-  if (!cycle) return <AppShell><EmptyState description="Nenhum ciclo semanal foi cadastrado." /></AppShell>;
+  if (!cycle) return <AppShell><EmptyState title="Nenhum ciclo semanal" description="Abra o primeiro período de coleta para os gestores." action={role === "gerente" ? <Link className="inline-flex min-h-10 items-center gap-2 rounded-app bg-primary px-4 py-2 text-sm font-semibold text-white" href="/ciclos"><CalendarRange size={16} />Gerenciar ciclos</Link> : undefined} /></AppShell>;
 
   const mine = reports.data?.filter((report) => report.managerId === user?.id) ?? [];
   const hasSubmitted = mine.length > 0;
@@ -53,7 +53,7 @@ export default function HomePage() {
 
   return (
     <AppShell>
-      <PageHeader title="Situação da coleta desta semana" description="Visão objetiva do período atual de registros semanais." />
+      <PageHeader title="Situação da coleta desta semana" description="Visão objetiva do período atual de registros semanais." actions={role === "gerente" ? <Link className="inline-flex min-h-10 items-center gap-2 rounded-app border border-border bg-white px-4 py-2 text-sm font-semibold text-text" href="/ciclos"><CalendarRange size={16} />Gerenciar ciclos</Link> : undefined} />
       <div className="space-y-5">
         <CollectionStatusBanner cycle={cycle} />
         {overview.data ? (

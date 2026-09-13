@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save, X } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services/api";
 import type { ActivityReport, WeeklyCycle } from "@/types";
@@ -10,6 +10,9 @@ import { Button } from "../ui/button";
 import { Input, Textarea } from "../ui/input";
 import { FieldMessage } from "../ui/field-message";
 import { activityEditSchema, type ActivityEditValues } from "./activitySchema";
+import { ACTIVITY_LIMITS, getActivityTemplate } from "./activityTemplates";
+import { ActivitySynthesisPreview } from "./ActivitySynthesisPreview";
+import { CharacterCounter } from "./CharacterCounter";
 
 export function ActivityEditForm({
   report,
@@ -40,19 +43,25 @@ export function ActivityEditForm({
       summary: report.summary,
       result: report.result,
       beneficiaries: report.beneficiaries,
+      evidence: report.evidence,
+      nextStep: report.nextStep,
+      internalNotes: report.internalNotes,
     },
   });
   const error = (field: keyof ActivityEditValues) => form.formState.errors[field]?.message?.toString();
+  const template = getActivityTemplate(report.templateKey);
+  const values = useWatch({ control: form.control });
 
   return (
     <form className="space-y-5 rounded-app border border-border bg-white p-5 shadow-subtle" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
       <div className="rounded-app border border-border bg-page p-3 text-sm text-muted">
-        Fotos, área e responsável são preservados. A edição textual só é aceita enquanto o ciclo estiver aberto ou reaberto.
+        Modelo: <strong>{template.label}</strong>. Fotos, área e responsável são preservados. A edição textual só é aceita enquanto o ciclo estiver aberto ou reaberto.
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <label htmlFor="edit-activity-title" className="text-sm font-medium">
           Título da atividade
           <Input id="edit-activity-title" className="mt-1" aria-invalid={Boolean(error("title"))} aria-describedby={error("title") ? "edit-activity-title-error" : undefined} {...form.register("title")} />
+          <CharacterCounter value={values.title} limit={ACTIVITY_LIMITS.title} />
           <FieldMessage id="edit-activity-title-error">{error("title")}</FieldMessage>
         </label>
         <label htmlFor="edit-activity-date" className="text-sm font-medium">
@@ -68,18 +77,42 @@ export function ActivityEditForm({
         <label htmlFor="edit-activity-beneficiaries" className="text-sm font-medium">
           Público beneficiado
           <Input id="edit-activity-beneficiaries" className="mt-1" aria-invalid={Boolean(error("beneficiaries"))} aria-describedby={error("beneficiaries") ? "edit-activity-beneficiaries-error" : undefined} {...form.register("beneficiaries")} />
+          <CharacterCounter value={values.beneficiaries} limit={ACTIVITY_LIMITS.beneficiaries} />
           <FieldMessage id="edit-activity-beneficiaries-error">{error("beneficiaries")}</FieldMessage>
         </label>
       </div>
       <label htmlFor="edit-activity-summary" className="block text-sm font-medium">
-        Descrição resumida
-        <Textarea id="edit-activity-summary" className="mt-1" aria-invalid={Boolean(error("summary"))} aria-describedby={error("summary") ? "edit-activity-summary-error" : undefined} {...form.register("summary")} />
+        {template.summaryLabel}
+        <Textarea id="edit-activity-summary" className="mt-1" placeholder={template.summaryPlaceholder} aria-invalid={Boolean(error("summary"))} aria-describedby={error("summary") ? "edit-activity-summary-error" : undefined} {...form.register("summary")} />
+        <CharacterCounter value={values.summary} limit={ACTIVITY_LIMITS.summary} />
         <FieldMessage id="edit-activity-summary-error">{error("summary")}</FieldMessage>
       </label>
       <label htmlFor="edit-activity-result" className="block text-sm font-medium">
-        Resultado alcançado
-        <Textarea id="edit-activity-result" className="mt-1" aria-invalid={Boolean(error("result"))} aria-describedby={error("result") ? "edit-activity-result-error" : undefined} {...form.register("result")} />
+        {template.resultLabel}
+        <Textarea id="edit-activity-result" className="mt-1" placeholder={template.resultPlaceholder} aria-invalid={Boolean(error("result"))} aria-describedby={error("result") ? "edit-activity-result-error" : undefined} {...form.register("result")} />
+        <CharacterCounter value={values.result} limit={ACTIVITY_LIMITS.result} />
         <FieldMessage id="edit-activity-result-error">{error("result")}</FieldMessage>
+      </label>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label htmlFor="edit-activity-evidence" className="block text-sm font-medium">
+          {template.evidenceLabel} <span className="font-normal text-muted">(opcional)</span>
+          <Input id="edit-activity-evidence" className="mt-1" placeholder={template.evidencePlaceholder} aria-invalid={Boolean(error("evidence"))} {...form.register("evidence")} />
+          <CharacterCounter value={values.evidence} limit={ACTIVITY_LIMITS.evidence} />
+          <FieldMessage id="edit-activity-evidence-error">{error("evidence")}</FieldMessage>
+        </label>
+        <label htmlFor="edit-activity-next-step" className="block text-sm font-medium">
+          {template.nextStepLabel} <span className="font-normal text-muted">(opcional)</span>
+          <Input id="edit-activity-next-step" className="mt-1" placeholder={template.nextStepPlaceholder} aria-invalid={Boolean(error("nextStep"))} {...form.register("nextStep")} />
+          <CharacterCounter value={values.nextStep} limit={ACTIVITY_LIMITS.nextStep} />
+          <FieldMessage id="edit-activity-next-step-error">{error("nextStep")}</FieldMessage>
+        </label>
+      </div>
+      <ActivitySynthesisPreview templateKey={report.templateKey} title={values.title} date={values.date} location={values.location} summary={values.summary} result={values.result} beneficiaries={values.beneficiaries} evidence={values.evidence} nextStep={values.nextStep} />
+      <label htmlFor="edit-activity-notes" className="block border-t border-border pt-5 text-sm font-medium">
+        Notas para consulta <span className="font-normal text-muted">(não aparecem na síntese)</span>
+        <Textarea id="edit-activity-notes" className="mt-1 min-h-36" aria-invalid={Boolean(error("internalNotes"))} {...form.register("internalNotes")} />
+        <CharacterCounter value={values.internalNotes} limit={ACTIVITY_LIMITS.internalNotes} />
+        <FieldMessage id="edit-activity-notes-error">{error("internalNotes")}</FieldMessage>
       </label>
       {mutation.isError ? <p role="alert" className="rounded-app border border-danger p-3 text-sm text-danger">{mutation.error.message}</p> : null}
       <div className="flex gap-2">

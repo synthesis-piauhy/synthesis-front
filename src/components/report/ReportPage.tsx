@@ -23,7 +23,10 @@ export function ReportPage({
         <div className="text-right text-sm text-muted">{cycleLabel}</div>
       </header>
       {sections.map((section) => (
-        <ReportSection key={section.id} section={section} activities={activities} selectedCardId={selectedCardId} onSelect={onSelect} />
+        <div key={section.id}>
+          {section.executiveSummary ? <p className="mt-4 rounded-md border-l-4 border-accent bg-page px-3 py-2 text-xs leading-5 text-text">{section.executiveSummary}</p> : null}
+          <ReportSection section={section} activities={activities} selectedCardId={selectedCardId} onSelect={onSelect} />
+        </div>
       ))}
       <footer className="mt-4 border-t border-border pt-3 text-right text-xs text-muted">Página {page}</footer>
     </div>

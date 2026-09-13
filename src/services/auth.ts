@@ -17,6 +17,7 @@ export function clearSession() {
 }
 
 export async function getCsrfToken() {
+  if (process.env.NEXT_PUBLIC_API_URL === "mock") return "mock-csrf-token";
   const cookie = typeof document !== "undefined"
     ? document.cookie.split("; ").find((item) => item.startsWith("csrftoken="))?.slice(10) : undefined;
   if (cookie) return decodeURIComponent(cookie);
@@ -41,12 +42,14 @@ async function sessionRequest(path: string, body: Record<string, string> = {}) {
 
 export async function loginWithPassword(email: string, password: string) {
   clearSession();
+  if (process.env.NEXT_PUBLIC_API_URL === "mock") return;
   await sessionRequest("/token/pair", { email, password });
 }
 
 export async function logoutSession(all = false) {
   // Invalidate pending UI reads immediately, including those from before logout.
   clearSession();
+  if (process.env.NEXT_PUBLIC_API_URL === "mock") return;
   try {
     await sessionRequest(all ? "/token/logout-all" : "/token/logout");
   } catch {

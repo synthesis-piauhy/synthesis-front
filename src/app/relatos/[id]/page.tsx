@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/services/api";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/app/providers";
+import { getActivityTemplate } from "@/components/activity/activityTemplates";
 
 export default function ActivityDetailPage() {
   const params = useParams<{ id: string }>();
@@ -27,6 +28,7 @@ export default function ActivityDetailPage() {
   const ownsReport = role === "gestor" && user?.id === report.data?.managerId;
   const acceptsChanges = cycle?.status === "aberta" || cycle?.status === "reaberta";
   const canEdit = Boolean(ownsReport && acceptsChanges && cycle);
+  const template = getActivityTemplate(report.data?.templateKey);
 
   return (
     <AppShell>
@@ -53,16 +55,26 @@ export default function ActivityDetailPage() {
                 <section className="space-y-5 rounded-app border border-border bg-white p-5 shadow-subtle">
                   <PhotoGallery photos={report.data.photos} />
                   <div>
-                    <h2 className="text-lg font-semibold">Descrição resumida</h2>
+                    <h2 className="text-lg font-semibold">{template.summaryLabel}</h2>
                     <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{report.data.summary}</p>
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold">Resultado alcançado</h2>
+                    <h2 className="text-lg font-semibold">{template.resultLabel}</h2>
                     <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{report.data.result}</p>
                   </div>
+                  {report.data.evidence ? <div><h2 className="text-lg font-semibold">{template.evidenceLabel}</h2><p className="mt-2 text-sm text-muted">{report.data.evidence}</p></div> : null}
+                  {report.data.nextStep ? <div><h2 className="text-lg font-semibold">{template.nextStepLabel}</h2><p className="mt-2 text-sm text-muted">{report.data.nextStep}</p></div> : null}
+                  {report.data.internalNotes ? (
+                    <div className="rounded-app border border-border bg-page p-4">
+                      <h2 className="text-base font-semibold">Informações complementares</h2>
+                      <p className="text-xs text-muted">Conteúdo de consulta; não é publicado na síntese.</p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{report.data.internalNotes}</p>
+                    </div>
+                  ) : null}
                 </section>
                 <aside className="space-y-3 rounded-app border border-border bg-white p-5 shadow-subtle">
                   <Badge>{report.data.area}</Badge>
+                  <p className="text-sm"><strong>Modelo:</strong> {template.label} · v{report.data.templateVersion}</p>
                   <p className="text-sm"><strong>Data:</strong> {formatDate(report.data.date)}</p>
                   <p className="text-sm"><strong>Local:</strong> {report.data.location}</p>
                   <p className="text-sm"><strong>Gestor:</strong> {users.data?.find((item) => item.id === report.data?.managerId)?.name ?? user?.name}</p>
@@ -78,4 +90,3 @@ export default function ActivityDetailPage() {
     </AppShell>
   );
 }
-

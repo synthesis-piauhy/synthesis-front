@@ -3,6 +3,7 @@
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import type { ActivityReport, WeeklyReport } from "@/types";
 import { ReportPage } from "./ReportPage";
+import { ExecutiveReportPage } from "./ExecutiveReportPage";
 
 export function ReportCanvas({
   report,
@@ -29,8 +30,9 @@ export function ReportCanvas({
 
   return (
     <DndContext onDragEnd={handleDragEnd}>
-      <div className="flex min-h-[760px] justify-center overflow-auto rounded-app border border-border bg-neutral-100 p-6">
-        <ReportPage page={1} cycleLabel={cycleLabel} sections={sections} activities={activities} selectedCardId={selectedCardId} onSelect={onSelectCard} />
+      <div className="min-h-[760px] space-y-6 overflow-auto rounded-app border border-border bg-neutral-100 p-6">
+        <div className="flex justify-center"><ExecutiveReportPage report={report} cycleLabel={cycleLabel} /></div>
+        <div className="flex justify-center"><ReportPage page={2} cycleLabel={cycleLabel} sections={sections} activities={activities} selectedCardId={selectedCardId} onSelect={onSelectCard} /></div>
       </div>
     </DndContext>
   );

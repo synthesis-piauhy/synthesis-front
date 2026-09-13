@@ -23,6 +23,7 @@ export default function EditorialSelectionPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string[]>([]);
+  const [selectionOverrides, setSelectionOverrides] = useState<Record<string, string[]>>({});
   const [cycleId, setCycleId] = useState<string>();
   const [filters, setFilters] = useState<ActivityFilterValue>(emptyActivityFilters);
   const cycles = useQuery({ queryKey: ["cycles"], queryFn: api.listWeeklyCycles });
@@ -36,8 +37,11 @@ export default function EditorialSelectionPage() {
   const users = useQuery({ queryKey: ["users"], queryFn: api.listUsers });
   const areas = useQuery({ queryKey: ["areas"], queryFn: api.listAreas });
   const existingReport = weeklyReports.data?.find((report) => report.cycleId === selectedCycleId);
-  const locked = Boolean(existingReport);
-  const effectiveSelected = existingReport?.selectedActivityIds ?? selected;
+  const selectionReopened = existingReport?.status === "em_selecao";
+  const locked = Boolean(existingReport && !selectionReopened);
+  const effectiveSelected = selectionReopened && selectedCycleId
+    ? (selectionOverrides[selectedCycleId] ?? existingReport.selectedActivityIds)
+    : (existingReport?.selectedActivityIds ?? selected);
   const visibleReports = filterActivityReports(
     (reports.data ?? []).filter((report) =>
       (!filters.area || report.area === filters.area) &&
@@ -48,13 +52,24 @@ export default function EditorialSelectionPage() {
   const draft = useMutation({
     mutationFn: () => {
       if (!selectedCycleId) throw new Error("Selecione uma semana.");
-      return api.generateDraft(selectedCycleId, selected);
+      return api.generateDraft(selectedCycleId, effectiveSelected);
     },
     onSuccess: async (report) => {
       await queryClient.invalidateQueries({ queryKey: ["weeklyReports"] });
       router.push(`/relatorio-semanal/${report.id}/editar`);
     },
   });
+
+  function updateSelection(update: (current: string[]) => string[]) {
+    if (selectionReopened && selectedCycleId && existingReport) {
+      setSelectionOverrides((current) => ({
+        ...current,
+        [selectedCycleId]: update(current[selectedCycleId] ?? existingReport.selectedActivityIds),
+      }));
+      return;
+    }
+    setSelected(update);
+  }
 
   const selectedByArea = useMemo(() => {
     return (areas.data ?? []).map((area) => ({
@@ -79,10 +94,16 @@ export default function EditorialSelectionPage() {
               <LockKeyhole className="text-warning" size={20} />
               <div>
                 <strong>Seleção encerrada</strong>
-                <p className="text-muted">O rascunho deste ciclo já existe. A seleção original permanece imutável.</p>
+                <p className="text-muted">O rascunho deste ciclo já existe. Reabra a seleção na página do mosaico se precisar corrigi-la antes do primeiro PDF.</p>
               </div>
             </div>
             <Link href={`/relatorio-semanal/${existingReport.id}/editar`} className="rounded-app bg-primary px-4 py-2 font-medium text-white">Abrir editor</Link>
+          </div>
+        ) : null}
+        {selectionReopened ? (
+          <div className="mb-5 rounded-app border border-warning bg-white p-4 text-sm">
+            <strong>Seleção reaberta</strong>
+            <p className="text-muted">Ajuste as atividades e atualize o rascunho. A edição fica bloqueada até você concluir esta etapa.</p>
           </div>
         ) : null}
         <ActivityFilters areas={areas.data ?? []} users={users.data ?? []} value={filters} onChange={setFilters} showScope={false} />
@@ -91,7 +112,7 @@ export default function EditorialSelectionPage() {
             Resumo: {selectedByArea.length ? selectedByArea.map((item) => `${item.area}: ${item.total}`).join("; ") : "nenhuma atividade selecionada"}
           </div>
           {!locked ? (
-            <Button onClick={() => setSelected((current) => Array.from(new Set([...current, ...visibleReports.map((report) => report.id)])))} variant="outline">
+            <Button onClick={() => updateSelection((current) => Array.from(new Set([...current, ...visibleReports.map((report) => report.id)])))} variant="outline">
               Selecionar resultados filtrados
             </Button>
           ) : null}
@@ -106,7 +127,7 @@ export default function EditorialSelectionPage() {
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">{area}</h2>
                 {!locked ? (
-                  <Button variant="outline" onClick={() => setSelected((current) => Array.from(new Set([...current, ...areaReports.map((report) => report.id)])))}>
+                  <Button variant="outline" onClick={() => updateSelection((current) => Array.from(new Set([...current, ...areaReports.map((report) => report.id)])))}>
                     Selecionar todos da área
                   </Button>
                 ) : null}
@@ -119,7 +140,7 @@ export default function EditorialSelectionPage() {
                     manager={users.data?.find((user) => user.id === report.managerId)}
                     checked={effectiveSelected.includes(report.id)}
                     disabled={locked}
-                    onToggle={() => setSelected((current) => current.includes(report.id) ? current.filter((id) => id !== report.id) : [...current, report.id])}
+                    onToggle={() => updateSelection((current) => current.includes(report.id) ? current.filter((id) => id !== report.id) : [...current, report.id])}
                   />
                 ))}
               </div>
@@ -129,9 +150,9 @@ export default function EditorialSelectionPage() {
         {draft.isError ? <p role="alert" className="rounded-app border border-danger p-3 text-sm text-danger">{draft.error.message}</p> : null}
         {!locked ? (
           <div className="sticky bottom-0 mt-6 flex justify-end border-t border-border bg-page py-4">
-            <Button disabled={!selected.length || !selectedCycleId || draft.isPending} onClick={() => draft.mutate()}>
+            <Button disabled={!effectiveSelected.length || !selectedCycleId || draft.isPending} onClick={() => draft.mutate()}>
               <FileText size={16} aria-hidden />
-              {draft.isPending ? "Gerando rascunho..." : `Gerar rascunho com ${selected.length} atividades`}
+              {draft.isPending ? "Salvando seleção..." : selectionReopened ? `Atualizar rascunho com ${effectiveSelected.length} atividades` : `Gerar rascunho com ${effectiveSelected.length} atividades`}
             </Button>
           </div>
         ) : null}

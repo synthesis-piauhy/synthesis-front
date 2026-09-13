@@ -52,7 +52,7 @@ export const cycles: WeeklyCycle[] = [
     startsAt: "2026-08-03",
     endsAt: "2026-08-07",
     deadline: "2026-08-08T12:00:00-03:00",
-    status: "reaberta",
+    status: "encerrada",
   },
 ];
 
@@ -64,8 +64,16 @@ const photo = (id: string, index: number, name: string, isMain = false) => ({
   alt: name,
 });
 
+const templateData = (
+  templateKey: string,
+  evidence = "",
+  nextStep = "",
+  internalNotes = "",
+) => ({ templateKey, templateVersion: 1, evidence, nextStep, internalNotes });
+
 export const activityReports: ActivityReport[] = [
   {
+    ...templateData("atendimento_articulacao", "18 produtores orientados", "Revisar os registros na próxima visita."),
     id: "a1",
     title: "Visita técnica a produtores rurais",
     date: "2026-08-17",
@@ -81,6 +89,7 @@ export const activityReports: ActivityReport[] = [
     updatedAt: "2026-08-17T15:00:00-03:00",
   },
   {
+    ...templateData("acao_evento", "24 planos de melhoria elaborados"),
     id: "a2",
     title: "Oficina de boas práticas para restaurantes",
     date: "2026-08-18",
@@ -96,6 +105,7 @@ export const activityReports: ActivityReport[] = [
     updatedAt: "2026-08-18T16:00:00-03:00",
   },
   {
+    ...templateData("atendimento_articulacao", "2 gargalos produtivos identificados", "Acompanhar os registros de desperdício."),
     id: "a3",
     title: "Consultoria para indústria moveleira",
     date: "2026-08-19",
@@ -111,6 +121,7 @@ export const activityReports: ActivityReport[] = [
     updatedAt: "2026-08-19T11:00:00-03:00",
   },
   {
+    ...templateData("acao_evento", "32 empreendedoras participantes", "Realizar a primeira mentoria coletiva."),
     id: "a4",
     title: "Encontro de empreendedoras da moda",
     date: "2026-08-20",
@@ -126,6 +137,7 @@ export const activityReports: ActivityReport[] = [
     updatedAt: "2026-08-20T17:00:00-03:00",
   },
   {
+    ...templateData("acao_evento", "27 propostas pedagógicas estruturadas"),
     id: "a5",
     title: "Formação de professores empreendedores",
     date: "2026-08-11",
@@ -141,6 +153,7 @@ export const activityReports: ActivityReport[] = [
     updatedAt: "2026-08-11T10:00:00-03:00",
   },
   {
+    ...templateData("acao_evento", "36 participantes capacitados"),
     id: "a6",
     title: "Jornada de capacitação empresarial",
     date: "2026-08-12",
@@ -162,11 +175,13 @@ export const weeklyReports: WeeklyReport[] = [
     id: "r1",
     cycleId: "c1",
     status: "em_edicao",
+    executiveSummary: "A semana apresentou avanços em quatro áreas, com entregas práticas e ações de acompanhamento já definidas.",
     selectedActivityIds: ["a1", "a2", "a3", "a4"],
     sections: areas.slice(0, 4).map((area, areaIndex) => ({
       id: `s${areaIndex + 1}`,
       area,
       title: area,
+      executiveSummary: "",
       order: areaIndex,
       cards: activityReports
         .filter((activity) => activity.area === area && activity.cycleId === "c1")
@@ -176,9 +191,19 @@ export const weeklyReports: WeeklyReport[] = [
           editorialTitle: activity.title,
           editorialSummary: activity.summary,
           editorialResult: activity.result,
+          editorialEvidence: activity.evidence,
+          editorialNextStep: activity.nextStep,
+          executiveClassification: areaIndex < 3 && order === 0 ? "destaque" : "informativo",
+          needsDecision: false,
+          decisionRequest: "",
+          nextStepOwner: activity.nextStep ? users.find((user) => user.id === activity.managerId)?.name ?? "" : "",
+          nextStepDueDate: activity.nextStep ? "2026-08-28" : null,
           selectedPhotoId: activity.photos.find((item) => item.isMain)?.id ?? activity.photos[0].id,
           area: activity.area,
           originalDate: activity.date,
+          originalLocation: activity.location,
+          originalBeneficiaries: activity.beneficiaries,
+          originalManagerName: users.find((user) => user.id === activity.managerId)?.name ?? "Gestor responsável",
           order,
           removed: false,
         })),
@@ -190,6 +215,7 @@ export const weeklyReports: WeeklyReport[] = [
     id: "r2",
     cycleId: "c2",
     status: "pdf_gerado",
+    executiveSummary: "A semana consolidou ações de educação e gestão empresarial com resultados documentados.",
     selectedActivityIds: ["a5", "a6"],
     sections: [],
     versions: [

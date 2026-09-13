@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Archive, FilePlus2, Files, LayoutGrid, ListChecks, Home, LogOut, Settings, X, type LucideIcon } from "lucide-react";
+import { Archive, CalendarRange, FilePlus2, Files, LayoutGrid, ListChecks, Home, LogOut, Settings, X, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/app/providers";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
@@ -21,6 +21,7 @@ const mainItems: NavigationItem[] = [
 ];
 
 const mosaicItems: NavigationItem[] = [
+  { href: "/ciclos", label: "Ciclos semanais", icon: CalendarRange, active: (pathname) => pathname === "/ciclos" },
   {
     href: "/relatorio-semanal",
     label: "Visão geral",

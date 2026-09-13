@@ -2,18 +2,23 @@ import { describe, expect, it } from "vitest";
 import { activitySchema } from "@/components/activity/activitySchema";
 import { mockApi } from "@/services/api";
 import type { ReportCard, UserRole } from "@/types";
+import { reportGenerationIssues } from "@/components/report/reportValidation";
 
 const image = new File(["conteudo"], "foto.png", { type: "image/png" });
 
 describe("validação do formulário de atividade", () => {
   it("aceita dados válidos com foto principal", () => {
     const result = activitySchema.safeParse({
+      templateKey: "acao_evento",
       title: "Oficina de boas práticas",
       date: "2026-08-18",
       location: "Centro de capacitação",
       summary: "Atividade realizada com participantes da área.",
       result: "Participantes definiram melhorias para aplicação imediata.",
       beneficiaries: "24 participantes",
+      evidence: "24 planos elaborados",
+      nextStep: "Acompanhar a aplicação dos planos.",
+      internalNotes: "",
       area: "Gastronomia",
       managerId: "u2",
       mainPhoto: image,
@@ -25,14 +30,39 @@ describe("validação do formulário de atividade", () => {
 
   it("bloqueia envio sem foto principal", () => {
     const result = activitySchema.safeParse({
+      templateKey: "acao_evento",
       title: "Oficina",
       date: "2026-08-18",
       location: "Sala",
       summary: "Descrição adequada para validação.",
       result: "Resultado adequado para validação.",
       beneficiaries: "Participantes",
+      evidence: "",
+      nextStep: "",
+      internalNotes: "",
       area: "Gastronomia",
       managerId: "u2",
+      additionalPhotos: [],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("impede textos publicáveis maiores que o card da síntese", () => {
+    const result = activitySchema.safeParse({
+      templateKey: "acao_evento",
+      title: "Oficina",
+      date: "2026-08-18",
+      location: "Sala",
+      summary: "a".repeat(241),
+      result: "Resultado adequado para validação.",
+      beneficiaries: "Participantes",
+      evidence: "",
+      nextStep: "",
+      internalNotes: "Contexto extenso permitido para consulta da gerente.",
+      area: "Gastronomia",
+      managerId: "u2",
+      mainPhoto: image,
       additionalPhotos: [],
     });
 
@@ -57,6 +87,34 @@ describe("permissões por perfil", () => {
 });
 
 describe("fluxo editorial", () => {
+  it("expõe pendências objetivas do briefing executivo", async () => {
+    const report = await mockApi.generateDraft("c1", ["a1"]);
+    const card = report.sections[0].cards[0];
+    const invalid = {
+      ...report,
+      executiveSummary: "",
+      sections: report.sections.map((section) => ({
+        ...section,
+        cards: section.cards.map((item) => item.id !== card.id ? item : ({
+          ...item,
+          executiveClassification: "destaque" as const,
+          editorialEvidence: "",
+          needsDecision: true,
+          decisionRequest: "",
+          nextStepOwner: "",
+          nextStepDueDate: null,
+        })),
+      })),
+    };
+
+    expect(reportGenerationIssues(invalid)).toEqual(expect.arrayContaining([
+      "Preencha a leitura executiva da semana.",
+      "Todo destaque precisa apresentar uma evidência.",
+      "Toda decisão necessária precisa conter um pedido claro.",
+      "Todo próximo passo precisa ter responsável e prazo.",
+    ]));
+  });
+
   it("gera rascunho somente com relatos selecionados", async () => {
     const draft = await mockApi.generateDraft("c1", ["a1", "a2"]);
 
@@ -119,12 +177,16 @@ describe("fluxo editorial", () => {
 
   it("executa o fluxo completo de gestor até versão gerada", async () => {
     const created = await mockApi.createActivityReport({
+      templateKey: "acao_evento",
       title: "Jornada de capacitação empresarial",
       date: "2026-08-21",
       location: "Sala multiuso",
       summary: "Registro de atividade realizada com pequenos negócios.",
       result: "Participantes criaram plano de acompanhamento mensal.",
       beneficiaries: "20 participantes",
+      evidence: "20 planos mensais criados",
+      nextStep: "Revisar os planos no próximo ciclo.",
+      internalNotes: "",
       area: "Jornadas Empresariais",
       managerId: "u6",
       cycleId: "c1",
@@ -136,5 +198,28 @@ describe("fluxo editorial", () => {
     const version = await mockApi.generatePdf(draft.id);
 
     expect(version.version).toBe(1);
+  });
+});
+
+describe("gestão operacional de ciclos", () => {
+  it("encerra, abre, ajusta e reabre ciclos pela API do site", async () => {
+    const activeCycles = (await mockApi.listWeeklyCycles()).filter((cycle) => cycle.status === "aberta" || cycle.status === "reaberta");
+    const current = activeCycles.find((cycle) => cycle.status === "aberta");
+    expect(current).toBeDefined();
+    await Promise.all(activeCycles.map((cycle) => mockApi.closeWeeklyCycle(cycle.id)));
+
+    const created = await mockApi.createWeeklyCycle({
+      label: "24 a 28 de agosto de 2026",
+      startsAt: "2026-08-24",
+      endsAt: "2026-08-28",
+      deadline: "2026-08-28T18:00:00-03:00",
+    });
+    expect(created.status).toBe("aberta");
+    const changed = await mockApi.updateWeeklyCycleDeadline(created.id, "2026-08-28T19:00:00-03:00");
+    expect(changed.deadline).toContain("19:00:00");
+
+    await mockApi.closeWeeklyCycle(created.id);
+    const reopened = await mockApi.reopenCollection(current!.id, "Correção autorizada", "2026-08-29T12:00:00-03:00");
+    expect(reopened.status).toBe("reaberta");
   });
 });

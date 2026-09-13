@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/providers";
@@ -12,8 +12,12 @@ import { currentCycle } from "@/lib/cycles";
 import type { Area } from "@/types";
 import { Button } from "../ui/button";
 import { Input, Textarea } from "../ui/input";
+import { Select } from "../ui/select";
 import { FieldMessage } from "../ui/field-message";
 import { activitySchema, type ActivityFormValues } from "./activitySchema";
+import { ACTIVITY_LIMITS, ACTIVITY_TEMPLATES, getActivityTemplate } from "./activityTemplates";
+import { ActivitySynthesisPreview } from "./ActivitySynthesisPreview";
+import { CharacterCounter } from "./CharacterCounter";
 import { PhotoUploader } from "./PhotoUploader";
 
 export function ActivityForm({ closed = false }: { closed?: boolean }) {
@@ -34,18 +38,23 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activitySchema),
     defaultValues: {
+      templateKey: "acao_evento",
       title: "",
       date: "",
       location: "",
       summary: "",
       result: "",
       beneficiaries: "",
+      evidence: "",
+      nextStep: "",
+      internalNotes: "",
       area: "",
       managerId: "",
       mainPhoto: undefined,
       additionalPhotos: [],
     },
   });
+  const values = useWatch({ control: form.control });
 
   useEffect(() => {
     if (!cycle) return;
@@ -73,6 +82,9 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
   }
 
   const error = (field: keyof ActivityFormValues) => form.formState.errors[field]?.message?.toString();
+  const templateKey = values.templateKey;
+  const template = getActivityTemplate(templateKey);
+  const { title, date, location, summary, result, beneficiaries, evidence, nextStep, internalNotes } = values;
 
   return (
     <form
@@ -93,10 +105,29 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
           Período aceito: {new Date(`${cycle.startsAt}T00:00:00`).toLocaleDateString("pt-BR")} a {new Date(`${cycle.endsAt}T00:00:00`).toLocaleDateString("pt-BR")}. A primeira imagem será a foto principal.
         </div>
       ) : null}
-      <div className="grid gap-4 md:grid-cols-2">
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-base font-semibold text-text">1. Escolha o modelo do relato</h2>
+          <p className="text-sm text-muted">O modelo muda as perguntas, mas mantém a síntese final consistente.</p>
+        </div>
+        <label htmlFor="activity-template" className="block text-sm font-medium">
+          Tipo de relato
+          <Select id="activity-template" className="mt-1" {...form.register("templateKey")}>
+            {ACTIVITY_TEMPLATES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
+          </Select>
+          <span className="mt-1 block text-xs text-muted">{template.description}</span>
+        </label>
+      </section>
+      <section className="space-y-4 border-t border-border pt-5">
+        <div>
+          <h2 className="text-base font-semibold text-text">2. Identificação</h2>
+          <p className="text-sm text-muted">Dados objetivos que acompanham o card.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
         <label htmlFor="activity-title" className="text-sm font-medium">
           Título da atividade
-          <Input id="activity-title" className="mt-1" aria-invalid={Boolean(error("title"))} aria-describedby={error("title") ? "activity-title-error" : undefined} {...form.register("title")} />
+          <Input id="activity-title" className="mt-1" placeholder="Ex.: Oficina aprimora precificação de 24 negócios" aria-invalid={Boolean(error("title"))} aria-describedby={error("title") ? "activity-title-error" : undefined} {...form.register("title")} />
+          <CharacterCounter value={title} limit={ACTIVITY_LIMITS.title} />
           <FieldMessage id="activity-title-error">{error("title")}</FieldMessage>
         </label>
         <label htmlFor="activity-date" className="text-sm font-medium">
@@ -112,6 +143,7 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
         <label htmlFor="activity-beneficiaries" className="text-sm font-medium">
           Público beneficiado
           <Input id="activity-beneficiaries" className="mt-1" aria-invalid={Boolean(error("beneficiaries"))} aria-describedby={error("beneficiaries") ? "activity-beneficiaries-error" : undefined} {...form.register("beneficiaries")} />
+          <CharacterCounter value={beneficiaries} limit={ACTIVITY_LIMITS.beneficiaries} />
           <FieldMessage id="activity-beneficiaries-error">{error("beneficiaries")}</FieldMessage>
         </label>
         <label className="text-sm font-medium">
@@ -122,17 +154,54 @@ export function ActivityForm({ closed = false }: { closed?: boolean }) {
           Gestor responsável
           <Input className="mt-1" value={user?.name ?? ""} disabled />
         </label>
-      </div>
-      <label htmlFor="activity-summary" className="block text-sm font-medium">
-        Descrição resumida
-        <Textarea id="activity-summary" className="mt-1" aria-invalid={Boolean(error("summary"))} aria-describedby={error("summary") ? "activity-summary-error" : undefined} {...form.register("summary")} />
-        <FieldMessage id="activity-summary-error">{error("summary")}</FieldMessage>
-      </label>
-      <label htmlFor="activity-result" className="block text-sm font-medium">
-        Resultado alcançado
-        <Textarea id="activity-result" className="mt-1" aria-invalid={Boolean(error("result"))} aria-describedby={error("result") ? "activity-result-error" : undefined} {...form.register("result")} />
-        <FieldMessage id="activity-result-error">{error("result")}</FieldMessage>
-      </label>
+        </div>
+      </section>
+      <section className="space-y-4 border-t border-border pt-5">
+        <div>
+          <h2 className="text-base font-semibold text-text">3. Conteúdo da síntese</h2>
+          <p className="text-sm text-muted">Escreva apenas o essencial. Os detalhes podem ser registrados na seção seguinte.</p>
+        </div>
+        <label htmlFor="activity-summary" className="block text-sm font-medium">
+          {template.summaryLabel}
+          <span className="mt-0.5 block text-xs font-normal text-muted">{template.summaryHelp}</span>
+          <Textarea id="activity-summary" className="mt-1" placeholder={template.summaryPlaceholder} aria-invalid={Boolean(error("summary"))} aria-describedby={error("summary") ? "activity-summary-error" : undefined} {...form.register("summary")} />
+          <CharacterCounter value={summary} limit={ACTIVITY_LIMITS.summary} />
+          <FieldMessage id="activity-summary-error">{error("summary")}</FieldMessage>
+        </label>
+        <label htmlFor="activity-result" className="block text-sm font-medium">
+          {template.resultLabel}
+          <Textarea id="activity-result" className="mt-1" placeholder={template.resultPlaceholder} aria-invalid={Boolean(error("result"))} aria-describedby={error("result") ? "activity-result-error" : undefined} {...form.register("result")} />
+          <CharacterCounter value={result} limit={ACTIVITY_LIMITS.result} />
+          <FieldMessage id="activity-result-error">{error("result")}</FieldMessage>
+        </label>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label htmlFor="activity-evidence" className="block text-sm font-medium">
+            {template.evidenceLabel} <span className="font-normal text-muted">(opcional)</span>
+            <Input id="activity-evidence" className="mt-1" placeholder={template.evidencePlaceholder} aria-invalid={Boolean(error("evidence"))} {...form.register("evidence")} />
+            <CharacterCounter value={evidence} limit={ACTIVITY_LIMITS.evidence} />
+            <FieldMessage id="activity-evidence-error">{error("evidence")}</FieldMessage>
+          </label>
+          <label htmlFor="activity-next-step" className="block text-sm font-medium">
+            {template.nextStepLabel} <span className="font-normal text-muted">(opcional)</span>
+            <Input id="activity-next-step" className="mt-1" placeholder={template.nextStepPlaceholder} aria-invalid={Boolean(error("nextStep"))} {...form.register("nextStep")} />
+            <CharacterCounter value={nextStep} limit={ACTIVITY_LIMITS.nextStep} />
+            <FieldMessage id="activity-next-step-error">{error("nextStep")}</FieldMessage>
+          </label>
+        </div>
+        <ActivitySynthesisPreview templateKey={templateKey} title={title} date={date} location={location} summary={summary} result={result} beneficiaries={beneficiaries} evidence={evidence} nextStep={nextStep} />
+      </section>
+      <section className="space-y-4 border-t border-border pt-5">
+        <div>
+          <h2 className="text-base font-semibold text-text">4. Informações complementares</h2>
+          <p className="text-sm text-muted">Este conteúdo ajuda a gerente na conferência, mas não será publicado automaticamente.</p>
+        </div>
+        <label htmlFor="activity-internal-notes" className="block text-sm font-medium">
+          Notas para consulta <span className="font-normal text-muted">(opcional)</span>
+          <Textarea id="activity-internal-notes" className="mt-1 min-h-36" placeholder="Registre contexto, links, nomes ou detalhes que não precisam aparecer na síntese." aria-invalid={Boolean(error("internalNotes"))} {...form.register("internalNotes")} />
+          <CharacterCounter value={internalNotes} limit={ACTIVITY_LIMITS.internalNotes} />
+          <FieldMessage id="activity-internal-notes-error">{error("internalNotes")}</FieldMessage>
+        </label>
+      </section>
       <PhotoUploader
         label="Foto principal"
         files={mainFiles}
