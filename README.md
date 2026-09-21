@@ -65,12 +65,19 @@ npm run lint
 npm run typecheck
 npm test
 npm run test:e2e
+npm run test:e2e:integration
 npm run build
 ```
 
 O E2E usa Playwright, sobe um servidor Next.js isolado em `.next-e2e` e percorre o fluxo da gerente
 com dados mockados. Na primeira execução, instale o Chromium e suas bibliotecas com
 `npx playwright install --with-deps chromium` (ou prepare as dependências equivalentes na imagem de CI).
+
+O comando `test:e2e:integration` sobe também o Django real em `127.0.0.1:8001`, um PostgreSQL 17 efêmero em
+`tmpfs` e mídia descartável em `/tmp`. Ele valida sessão/CSRF, upload e edição por gestor, autorização de
+objetos, seleção/edição/reordenação, duas versões reais de PDF, fechamento do ciclo, arquivos privados e o
+CRUD administrativo com auditoria. O comando de preparação recusa qualquer banco diferente do banco de
+aceite `synthesis_mvp_e2e`, isolado em `127.0.0.1:5434`.
 
 O ambiente de desenvolvimento e a CI usam Node 22, registrado em `.nvmrc`. Em produção,
 o frontend e a API devem ficar sob a mesma origem HTTPS; veja a documentação de implantação

@@ -2,13 +2,15 @@ import type {
   ActivityReport,
   Area,
   CollectionOverview,
+  Notification,
+  NotificationFeed,
   ReportCard,
   ReportVersion,
   User,
   WeeklyCycle,
   WeeklyReport,
 } from "@/types";
-import { activityReports, areas, cycles, overview, users, weeklyReports } from "./mock-data";
+import { activityReports, areas, cycles, notifications, overview, users, weeklyReports } from "./mock-data";
 import { apiBaseUrl, clearSession, getCsrfToken, getSessionEpoch } from "./auth";
 
 export type ActivityInput = Omit<ActivityReport, "id" | "templateVersion" | "photos" | "createdAt" | "updatedAt"> & {
@@ -20,6 +22,12 @@ export type WeeklyCycleInput = Pick<WeeklyCycle, "label" | "startsAt" | "endsAt"
 export type SynthesisApi = {
   health(): Promise<{ detail: string }>;
   getAuthenticatedUser(role?: string): Promise<User>;
+  updateProfileName(name: string): Promise<User>;
+  uploadProfileAvatar(file: File): Promise<User>;
+  removeProfileAvatar(): Promise<User>;
+  listNotifications(): Promise<NotificationFeed>;
+  markNotificationRead(id: string): Promise<Notification>;
+  markAllNotificationsRead(): Promise<void>;
   listAreas(): Promise<Area[]>;
   listUsers(): Promise<User[]>;
   listWeeklyCycles(): Promise<WeeklyCycle[]>;
@@ -102,6 +110,9 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     }
   }
   if (!response.ok) throw new ApiError(errorMessage(payload), response.status);
+  if (!["GET", "HEAD", "OPTIONS"].includes(init.method ?? "GET") && !path.startsWith("/notifications") && typeof window !== "undefined") {
+    window.dispatchEvent(new Event("synthesis:notifications-changed"));
+  }
   return payload as T;
 }
 
@@ -127,6 +138,16 @@ async function listAll<T>(path: string) {
 export const httpApi: SynthesisApi = {
   health: () => request<{ detail: string }>("/health"),
   getAuthenticatedUser: () => request<User>("/me"),
+  updateProfileName: (name) => request<User>("/me", { method: "PATCH", body: JSON.stringify({ name }) }),
+  uploadProfileAvatar: (file) => {
+    const body = new FormData();
+    body.set("avatar", file);
+    return request<User>("/me/avatar", { method: "POST", body });
+  },
+  removeProfileAvatar: () => request<User>("/me/avatar", { method: "DELETE" }),
+  listNotifications: () => request<NotificationFeed>("/notifications"),
+  markNotificationRead: (id) => request<Notification>(`/notifications/${id}/read`, { method: "PATCH" }),
+  markAllNotificationsRead: async () => { await request<{ detail: string }>("/notifications/read-all", { method: "POST" }); },
   listAreas: () => request<Area[]>("/areas"),
   listUsers: () => listAll<User>("/users"),
   listWeeklyCycles: () => listAll<WeeklyCycle>("/cycles"),
@@ -157,12 +178,13 @@ export const httpApi: SynthesisApi = {
     body.set("evidence", input.evidence);
     body.set("nextStep", input.nextStep);
     body.set("internalNotes", input.internalNotes);
+    body.set("guidedAnswers", JSON.stringify(input.guidedAnswers ?? {}));
     body.set("cycleId", input.cycleId);
     input.photos.forEach((photo) => body.append("photos", photo));
     return request<ActivityReport>("/activity-reports", { method: "POST", body });
   },
   updateOwnActivityReport: (id, input) => {
-    const allowed = ["title", "date", "location", "summary", "result", "beneficiaries", "evidence", "nextStep", "internalNotes"] as const;
+    const allowed = ["title", "date", "location", "summary", "result", "beneficiaries", "evidence", "nextStep", "internalNotes", "guidedAnswers"] as const;
     const body = Object.fromEntries(allowed.filter((key) => input[key] !== undefined).map((key) => [key, input[key]]));
     return request<ActivityReport>(`/activity-reports/${id}`, { method: "PATCH", body: JSON.stringify(body) });
   },
@@ -225,10 +247,70 @@ const clone = <T>(value: T): T => structuredClone(value);
 let reports = clone(activityReports);
 let weekly = clone(weeklyReports);
 let cycleRecords = clone(cycles);
+let notificationRecords = clone(notifications);
+const mockUser = () => users.find((item) => item.role === (process.env.NEXT_PUBLIC_MOCK_ROLE ?? "gestor")) ?? users[0];
+const notifyMock = (userId: string, kind: Notification["kind"], message: string, href: string) => {
+  notificationRecords = [{ id: `n${Date.now()}-${notificationRecords.length}`, userId, kind, message, href, read: false, createdAt: new Date().toISOString() }, ...notificationRecords];
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("synthesis:notifications-changed"));
+};
+const notifyManagersMock = (kind: Notification["kind"], message: string, href: string) => {
+  users.filter((item) => item.role === "gestor" && item.active).forEach((item) => notifyMock(item.id, kind, message, href));
+};
+const reminderKeys = new Set<string>();
+
+function ensureMockDeadlineReminder(user: User) {
+  const now = Date.now();
+  for (const cycle of cycleRecords.filter((item) => item.status === "aberta" || item.status === "reaberta")) {
+    const remaining = new Date(cycle.deadline).getTime() - now;
+    if (remaining <= 0 || remaining > 24 * 60 * 60 * 1000) continue;
+    const key = `${user.id}:${cycle.id}:${cycle.deadline}`;
+    if (reminderKeys.has(key)) continue;
+    if (user.role === "gestor" && reports.some((item) => item.cycleId === cycle.id && item.managerId === user.id)) continue;
+    const deadline = new Date(cycle.deadline).toLocaleString("pt-BR");
+    notifyMock(user.id, "prazo", `O prazo de "${cycle.label}" termina em ${deadline}.`, user.role === "gestor" ? "/relatos/novo" : "/");
+    reminderKeys.add(key);
+  }
+}
 
 export const mockApi: SynthesisApi = {
   health: async () => delay({ detail: "ok" }),
   getAuthenticatedUser: async (role = process.env.NEXT_PUBLIC_MOCK_ROLE ?? "gestor") => delay(clone(users.find((item) => item.role === role) ?? users[0])),
+  updateProfileName: async (name) => {
+    const normalized = name.trim().replace(/\s+/g, " ");
+    if (normalized.length < 2 || normalized.length > 150) throw new Error("Informe um nome entre 2 e 150 caracteres.");
+    const user = mockUser();
+    user.name = normalized;
+    return delay(clone(user));
+  },
+  uploadProfileAvatar: async (file) => {
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) throw new Error("Use uma imagem PNG, JPG ou WebP de até 5 MB.");
+    const user = mockUser();
+    if (user.avatarUrl?.startsWith("blob:")) URL.revokeObjectURL(user.avatarUrl);
+    user.avatarUrl = URL.createObjectURL(file);
+    return delay(clone(user));
+  },
+  removeProfileAvatar: async () => {
+    const user = mockUser();
+    if (user.avatarUrl?.startsWith("blob:")) URL.revokeObjectURL(user.avatarUrl);
+    user.avatarUrl = null;
+    return delay(clone(user));
+  },
+  listNotifications: async () => {
+    const user = mockUser();
+    ensureMockDeadlineReminder(user);
+    const mine = notificationRecords.filter((item) => item.userId === user.id);
+    return delay(clone({ items: mine.slice(0, 50), unreadCount: mine.filter((item) => !item.read).length }));
+  },
+  markNotificationRead: async (id) => {
+    const item = notificationRecords.find((entry) => entry.id === id && entry.userId === mockUser().id);
+    if (!item) throw new Error("Notificação não encontrada.");
+    item.read = true;
+    return delay(clone(item));
+  },
+  markAllNotificationsRead: async () => {
+    notificationRecords.filter((item) => item.userId === mockUser().id).forEach((item) => { item.read = true; });
+    await delay(undefined);
+  },
   listAreas: async () => delay(clone(areas)),
   listUsers: async () => delay(clone(users)),
   listWeeklyCycles: async () => delay(clone(cycleRecords)),
@@ -236,18 +318,24 @@ export const mockApi: SynthesisApi = {
     if (cycleRecords.some((cycle) => cycle.status === "aberta" || cycle.status === "reaberta")) throw new Error("Encerre o ciclo ativo antes de abrir um novo.");
     const created: WeeklyCycle = { id: `c${Date.now()}`, ...input, status: "aberta" };
     cycleRecords = [created, ...cycleRecords];
+    notifyMock(mockUser().id, "conclusao", `Ciclo "${created.label}" aberto com sucesso.`, "/ciclos");
+    notifyManagersMock("ciclo", `O ciclo "${created.label}" foi aberto. Prazo: ${new Date(created.deadline).toLocaleString("pt-BR")}.`, "/relatos/novo");
     return delay(clone(created));
   },
   closeWeeklyCycle: async (cycleId) => {
     cycleRecords = cycleRecords.map((cycle) => cycle.id === cycleId ? { ...cycle, status: "encerrada" } : cycle);
     const updated = cycleRecords.find((cycle) => cycle.id === cycleId);
     if (!updated) throw new Error("Ciclo não encontrado.");
+    notifyMock(mockUser().id, "conclusao", `Ciclo "${updated.label}" encerrado.`, "/ciclos");
+    notifyManagersMock("ciclo", `O ciclo "${updated.label}" foi encerrado.`, "/relatos");
     return delay(clone(updated));
   },
   updateWeeklyCycleDeadline: async (cycleId, deadline) => {
     cycleRecords = cycleRecords.map((cycle) => cycle.id === cycleId ? { ...cycle, deadline } : cycle);
     const updated = cycleRecords.find((cycle) => cycle.id === cycleId);
     if (!updated) throw new Error("Ciclo não encontrado.");
+    notifyMock(mockUser().id, "conclusao", `Prazo do ciclo "${updated.label}" atualizado.`, "/ciclos");
+    notifyManagersMock("prazo", `O prazo do ciclo "${updated.label}" mudou para ${new Date(deadline).toLocaleString("pt-BR")}.`, "/relatos/novo");
     return delay(clone(updated));
   },
   listActivityReports: async (filters) => delay(clone(reports.filter((report) => Object.entries(filters ?? {}).every(([key, value]) => !value || report[key as keyof ActivityReport] === value)))),
@@ -256,18 +344,22 @@ export const mockApi: SynthesisApi = {
     const created: ActivityReport = {
       ...input,
       id: `a${reports.length + 1}`,
-      templateVersion: 1,
+      templateVersion: 2,
       photos: input.photos.map((file, index) => ({ id: `new-${Date.now()}-${index}`, url: "/placeholders/foto-3.svg", name: file.name, isMain: index === 0, alt: file.name })),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     reports = [created, ...reports];
+    notificationRecords = notificationRecords.filter((item) => !(item.userId === created.managerId && item.kind === "prazo" && item.message.startsWith("O prazo de")));
+    notifyMock(created.managerId, "conclusao", `Relato "${created.title}" enviado com sucesso.`, `/relatos/${created.id}`);
+    users.filter((item) => item.role === "gerente" || item.role === "admin").forEach((item) => notifyMock(item.id, "atividade", `Novo relato "${created.title}" enviado.`, `/relatos/${created.id}`));
     return delay(clone(created));
   },
   updateOwnActivityReport: async (id, input) => {
     reports = reports.map((report) => (report.id === id ? { ...report, ...input, updatedAt: new Date().toISOString() } : report));
     const updated = reports.find((report) => report.id === id);
     if (!updated) throw new Error("Relato não encontrado.");
+    notifyMock(updated.managerId, "conclusao", `Alterações no relato "${updated.title}" salvas.`, `/relatos/${updated.id}`);
     return delay(clone(updated));
   },
   getCollectionOverview: async () => delay(clone(overview)),
@@ -275,6 +367,8 @@ export const mockApi: SynthesisApi = {
     cycleRecords = cycleRecords.map((cycle) => cycle.id === cycleId ? { ...cycle, status: "reaberta", deadline: newDeadline } : cycle);
     const updated = cycleRecords.find((cycle) => cycle.id === cycleId);
     if (!updated) throw new Error("Ciclo não encontrado.");
+    notifyMock(mockUser().id, "conclusao", `Ciclo "${updated.label}" reaberto.`, "/ciclos");
+    notifyManagersMock("ciclo", `O ciclo "${updated.label}" foi reaberto. Novo prazo: ${new Date(newDeadline).toLocaleString("pt-BR")}.`, "/relatos/novo");
     return delay(clone(updated));
   },
   getPendingManagers: async () => delay(clone(overview.pendingManagers)),
@@ -321,6 +415,7 @@ export const mockApi: SynthesisApi = {
       updatedAt: new Date().toISOString(),
     };
     weekly = replacing ? weekly.map((report) => report.id === replacing.id ? draft : report) : [draft, ...weekly];
+    notifyMock(mockUser().id, "conclusao", `Rascunho do relatório gerado.`, "/relatorio-semanal");
     return delay(clone(draft));
   },
   updateWeeklyReport: async (reportId, changes) => {
@@ -385,6 +480,7 @@ export const mockApi: SynthesisApi = {
     const version: ReportVersion = { id: `v${report.versions.length + 1}-${Date.now()}`, version: report.versions.length + 1, generatedAt: new Date().toISOString(), generatedBy: "u7", pdfUrl: `/relatorios/${report.id}` };
     report.status = "pdf_gerado";
     report.versions.push(version);
+    notifyMock(mockUser().id, "conclusao", `PDF do relatório (versão ${version.version}) gerado.`, "/historico");
     return delay(clone(version));
   },
   getPdfUrl: async (versionId) => delay(`/pdf/${versionId}.pdf`),

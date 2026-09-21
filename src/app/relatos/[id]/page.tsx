@@ -21,7 +21,10 @@ export default function ActivityDetailPage() {
   const params = useParams<{ id: string }>();
   const { user, role } = useAuth();
   const [editing, setEditing] = useState(false);
-  const report = useQuery({ queryKey: ["activityReport", params.id], queryFn: () => api.getActivityReport(params.id) });
+  const report = useQuery({
+    queryKey: ["activityReport", params.id],
+    queryFn: async () => (await api.getActivityReport(params.id)) ?? null,
+  });
   const users = useQuery({ queryKey: ["users"], queryFn: api.listUsers, enabled: role !== "gestor" });
   const cycles = useQuery({ queryKey: ["cycles"], queryFn: api.listWeeklyCycles });
   const cycle = cycles.data?.find((item) => item.id === report.data?.cycleId);

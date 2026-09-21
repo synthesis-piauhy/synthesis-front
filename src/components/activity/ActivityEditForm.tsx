@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save, X } from "lucide-react";
+import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services/api";
@@ -10,7 +11,9 @@ import { Button } from "../ui/button";
 import { Input, Textarea } from "../ui/input";
 import { FieldMessage } from "../ui/field-message";
 import { activityEditSchema, type ActivityEditValues } from "./activitySchema";
-import { ACTIVITY_LIMITS, getActivityTemplate } from "./activityTemplates";
+import { ACTIVITY_LIMITS, getActivityTemplate, type ActivityTemplateKey } from "./activityTemplates";
+import { generateActivityText, guidedAnswersComplete, type GuidedAnswers } from "./guidedActivity";
+import { GuidedQuestions } from "./GuidedQuestions";
 import { ActivitySynthesisPreview } from "./ActivitySynthesisPreview";
 import { CharacterCounter } from "./CharacterCounter";
 
@@ -26,8 +29,12 @@ export function ActivityEditForm({
   onSaved: (report: ActivityReport) => void;
 }) {
   const queryClient = useQueryClient();
+  const templateKey = report.templateKey as ActivityTemplateKey;
+  const guided = ["acao_evento", "entrega_marco", "atendimento_articulacao"].includes(templateKey);
+  const [answers, setAnswers] = useState<GuidedAnswers>(report.guidedAnswers ?? {});
+  const [edited, setEdited] = useState<Set<string>>(() => new Set(["title", "summary", "result", "beneficiaries"]));
   const mutation = useMutation({
-    mutationFn: (values: ActivityEditValues) => api.updateOwnActivityReport(report.id, values),
+    mutationFn: (values: ActivityEditValues) => api.updateOwnActivityReport(report.id, { ...values, guidedAnswers: answers }),
     onSuccess: async (updated) => {
       queryClient.setQueryData(["activityReport", report.id], updated);
       await queryClient.invalidateQueries({ queryKey: ["activityReports"] });
@@ -52,15 +59,32 @@ export function ActivityEditForm({
   const template = getActivityTemplate(report.templateKey);
   const values = useWatch({ control: form.control });
 
+  function applyGenerated(next: GuidedAnswers, force = false) {
+    if (!guided || !guidedAnswersComplete(templateKey, next)) return;
+    const generated = generateActivityText(templateKey, next);
+    for (const field of ["title", "summary", "result", "beneficiaries"] as const) {
+      if (force || !edited.has(field)) form.setValue(field, generated[field], { shouldValidate: true });
+    }
+    if (force) setEdited(new Set());
+  }
+  function updateAnswers(next: GuidedAnswers) {
+    setAnswers(next);
+    applyGenerated(next);
+  }
+  function markEdited(field: string) {
+    setEdited((previous) => new Set(previous).add(field));
+  }
+
   return (
     <form className="space-y-5 rounded-app border border-border bg-white p-5 shadow-subtle" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
       <div className="rounded-app border border-border bg-page p-3 text-sm text-muted">
         Modelo: <strong>{template.label}</strong>. Fotos, área e responsável são preservados. A edição textual só é aceita enquanto o ciclo estiver aberto ou reaberto.
       </div>
+      {guided ? <GuidedQuestions templateKey={templateKey} answers={answers} onChange={updateAnswers} onGenerate={() => applyGenerated(answers, true)} /> : null}
       <div className="grid gap-4 md:grid-cols-2">
         <label htmlFor="edit-activity-title" className="text-sm font-medium">
           Título da atividade
-          <Input id="edit-activity-title" className="mt-1" aria-invalid={Boolean(error("title"))} aria-describedby={error("title") ? "edit-activity-title-error" : undefined} {...form.register("title")} />
+          <Input id="edit-activity-title" className="mt-1" aria-invalid={Boolean(error("title"))} aria-describedby={error("title") ? "edit-activity-title-error" : undefined} {...form.register("title", { onChange: () => markEdited("title") })} />
           <CharacterCounter value={values.title} limit={ACTIVITY_LIMITS.title} />
           <FieldMessage id="edit-activity-title-error">{error("title")}</FieldMessage>
         </label>
@@ -76,20 +100,20 @@ export function ActivityEditForm({
         </label>
         <label htmlFor="edit-activity-beneficiaries" className="text-sm font-medium">
           Público beneficiado
-          <Input id="edit-activity-beneficiaries" className="mt-1" aria-invalid={Boolean(error("beneficiaries"))} aria-describedby={error("beneficiaries") ? "edit-activity-beneficiaries-error" : undefined} {...form.register("beneficiaries")} />
+          <Input id="edit-activity-beneficiaries" className="mt-1" aria-invalid={Boolean(error("beneficiaries"))} aria-describedby={error("beneficiaries") ? "edit-activity-beneficiaries-error" : undefined} {...form.register("beneficiaries", { onChange: () => markEdited("beneficiaries") })} />
           <CharacterCounter value={values.beneficiaries} limit={ACTIVITY_LIMITS.beneficiaries} />
           <FieldMessage id="edit-activity-beneficiaries-error">{error("beneficiaries")}</FieldMessage>
         </label>
       </div>
       <label htmlFor="edit-activity-summary" className="block text-sm font-medium">
         {template.summaryLabel}
-        <Textarea id="edit-activity-summary" className="mt-1" placeholder={template.summaryPlaceholder} aria-invalid={Boolean(error("summary"))} aria-describedby={error("summary") ? "edit-activity-summary-error" : undefined} {...form.register("summary")} />
+        <Textarea id="edit-activity-summary" className="mt-1" placeholder={template.summaryPlaceholder} aria-invalid={Boolean(error("summary"))} aria-describedby={error("summary") ? "edit-activity-summary-error" : undefined} {...form.register("summary", { onChange: () => markEdited("summary") })} />
         <CharacterCounter value={values.summary} limit={ACTIVITY_LIMITS.summary} />
         <FieldMessage id="edit-activity-summary-error">{error("summary")}</FieldMessage>
       </label>
       <label htmlFor="edit-activity-result" className="block text-sm font-medium">
         {template.resultLabel}
-        <Textarea id="edit-activity-result" className="mt-1" placeholder={template.resultPlaceholder} aria-invalid={Boolean(error("result"))} aria-describedby={error("result") ? "edit-activity-result-error" : undefined} {...form.register("result")} />
+        <Textarea id="edit-activity-result" className="mt-1" placeholder={template.resultPlaceholder} aria-invalid={Boolean(error("result"))} aria-describedby={error("result") ? "edit-activity-result-error" : undefined} {...form.register("result", { onChange: () => markEdited("result") })} />
         <CharacterCounter value={values.result} limit={ACTIVITY_LIMITS.result} />
         <FieldMessage id="edit-activity-result-error">{error("result")}</FieldMessage>
       </label>

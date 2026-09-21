@@ -47,7 +47,7 @@ export default function ReportEditorPage() {
   const [operationError, setOperationError] = useState("");
   const reportQuery = useQuery({
     queryKey: ["weeklyReport", params.id],
-    queryFn: () => api.getWeeklyReport(params.id),
+    queryFn: async () => (await api.getWeeklyReport(params.id)) ?? null,
     enabled: role === "gerente",
   });
   const report = localReport ?? reportQuery.data;

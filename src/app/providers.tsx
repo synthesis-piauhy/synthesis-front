@@ -13,6 +13,7 @@ type AuthContextValue = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updated: User) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -71,9 +72,14 @@ export function Providers({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateUser = (updated: User) => {
+    setUser((current) => current?.id === updated.id ? updated : current);
+    void queryClient.invalidateQueries({ queryKey: ["users"] });
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthContext.Provider value={{ user, role: user?.role ?? null, loading, login, logout }}>{children}</AuthContext.Provider>
+      <AuthContext.Provider value={{ user, role: user?.role ?? null, loading, login, logout, updateUser }}>{children}</AuthContext.Provider>
     </QueryClientProvider>
   );
 }

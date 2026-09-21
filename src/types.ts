@@ -13,6 +13,7 @@ export type User = {
   area: Area | null;
   role: UserRole;
   active: boolean;
+  avatarUrl?: string | null;
 };
 
 export type WeeklyCycle = {
@@ -45,6 +46,7 @@ export type ActivityReport = {
   evidence: string;
   nextStep: string;
   internalNotes: string;
+  guidedAnswers?: Record<string, string>;
   area: Area;
   managerId: string;
   cycleId: string;
@@ -107,10 +109,14 @@ export type WeeklyReport = {
 export type Notification = {
   id: string;
   userId: string;
+  kind: "conclusao" | "atividade" | "ciclo" | "prazo";
   message: string;
+  href: string;
   read: boolean;
   createdAt: string;
 };
+
+export type NotificationFeed = { items: Notification[]; unreadCount: number };
 
 export type AuditEvent = {
   id: string;

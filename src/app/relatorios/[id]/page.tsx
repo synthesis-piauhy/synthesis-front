@@ -22,7 +22,7 @@ export default function ReportViewPage() {
   const enabled = role === "gerente";
   const report = useQuery({
     queryKey: ["weeklyReport", params.id],
-    queryFn: () => api.getWeeklyReport(params.id),
+    queryFn: async () => (await api.getWeeklyReport(params.id)) ?? null,
     enabled,
   });
   const versions = useQuery({

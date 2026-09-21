@@ -235,7 +235,7 @@ export const overview: CollectionOverview = {
 };
 
 export const notifications: Notification[] = [
-  { id: "n1", userId: "u7", message: "Há gestores pendentes na coleta atual.", read: false, createdAt: "2026-08-20T09:00:00-03:00" },
+  { id: "n1", userId: "u7", kind: "prazo", message: "Há gestores pendentes na coleta atual.", href: "/", read: false, createdAt: "2026-08-20T09:00:00-03:00" },
 ];
 
 export const auditEvents: AuditEvent[] = [

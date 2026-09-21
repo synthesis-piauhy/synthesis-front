@@ -130,6 +130,30 @@
       .page-break {
         page-break-before: always;
       }
+
+      table {
+        width: 100%;
+        margin: 10px 0 16px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 8px 10px;
+        border: 1px solid #d7e0e5;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f7f9fa;
+        color: #123f5c;
+      }
+
+      .ok {
+        color: #18794e;
+        font-weight: 700;
+      }
     </style>
   </head>
   <body>
@@ -137,260 +161,239 @@
       <div class="brand">synthesis</div>
       <h1>Relatório técnico do frontend</h1>
       <p class="subtitle">
-        Explicação direta, sem espuma, para quem vem do backend e quer entender onde estão as peças,
-        como os dados circulam e onde encaixar a futura API Django.
+        Estado atual da aplicação web, integração com a API Django, fluxos por perfil,
+        regras editoriais e cobertura de validação do MVP.
       </p>
-      <p class="small">Gerado em 23/08/2026.</p>
+      <p class="small">Atualizado em 14/09/2026.</p>
     </section>
 
-    <h2>1. Resumo para cérebro cansado</h2>
+    <h2>1. Resumo executivo</h2>
     <p>
-      Este projeto é um frontend Next.js para a aplicação interna <strong>synthesis</strong>.
-      Ele não é um kanban, não mede produtividade e não tenta virar ferramenta de gestão de tarefas.
-      A missão dele é simples:
+      O frontend <strong>synthesis</strong> está implementado em Next.js e conectado à API Django.
+      O produto organiza a coleta semanal de relatos, a curadoria feita pela gerente e a publicação
+      de versões imutáveis do relatório executivo em PDF. A administração funcional também está
+      disponível na própria aplicação.
     </p>
     <ul>
-      <li>gestores registram atividades reais feitas na semana;</li>
-      <li>a gerente escolhe quais relatos entram no relatório;</li>
-      <li>o sistema monta um rascunho visual em mosaico;</li>
-      <li>a gerente edita somente o card editorial;</li>
-      <li>o relato original continua intacto;</li>
-      <li>o sistema gera versões de PDF para histórico.</li>
+      <li>gestores criam relatos guiados, enviam fotos e editam o próprio conteúdo enquanto o ciclo permite;</li>
+      <li>a gerente controla ciclos, acompanha pendências e seleciona o material da semana;</li>
+      <li>o editor cria uma camada editorial sem alterar o relato original;</li>
+      <li>a primeira página sintetiza leitura, indicadores, destaques, atenções e prioridades;</li>
+      <li>cada publicação cria uma nova versão de PDF, preservando as anteriores;</li>
+      <li>administradores operam cadastros e consultam registros e auditoria.</li>
     </ul>
     <div class="note">
-      Pense assim: <code>ActivityReport</code> é o dado original, tipo uma tabela imutável de entrada.
-      <code>ReportCard</code> é a cópia editorial usada no relatório, tipo uma view materializada editável.
+      <strong>Separação essencial:</strong> <code>ActivityReport</code> é a fonte da verdade enviada pelo gestor.
+      <code>ReportCard</code> é o snapshot editorial usado no relatório. Editar um card não altera o relato original.
     </div>
 
-    <h2>2. Stack usada</h2>
+    <h2>2. Stack e execução</h2>
     <div class="grid">
-      <div class="box">
-        <h3>Framework</h3>
-        <p><code>Next.js</code> com App Router, React e TypeScript strict.</p>
-      </div>
-      <div class="box">
-        <h3>UI</h3>
-        <p><code>Tailwind CSS</code>, componentes locais no estilo shadcn/ui e ícones Lucide.</p>
-      </div>
-      <div class="box">
-        <h3>Formulário</h3>
-        <p><code>React Hook Form</code> com validação via <code>Zod</code>.</p>
-      </div>
-      <div class="box">
-        <h3>Dados assíncronos</h3>
-        <p><code>TanStack Query</code> para cache e estado de carregamento.</p>
-      </div>
-      <div class="box">
-        <h3>Editor</h3>
-        <p><code>dnd-kit</code> para reordenar cards do relatório.</p>
-      </div>
-      <div class="box">
-        <h3>Imagem</h3>
-        <p><code>react-easy-crop</code> para a tela de recorte.</p>
-      </div>
+      <div class="box"><h3>Aplicação</h3><p>Next.js 16.3, React 19.3 e TypeScript 5.9 com App Router.</p></div>
+      <div class="box"><h3>Interface</h3><p>Tailwind CSS, componentes locais, Radix Dialog e ícones Lucide.</p></div>
+      <div class="box"><h3>Formulários</h3><p>React Hook Form e Zod para estado e validação.</p></div>
+      <div class="box"><h3>Dados</h3><p>TanStack Query sobre um contrato único <code>SynthesisApi</code>.</p></div>
+      <div class="box"><h3>Edição</h3><p>dnd-kit para ordenação e react-easy-crop para imagens.</p></div>
+      <div class="box"><h3>Qualidade</h3><p>ESLint, TypeScript, Vitest e Playwright.</p></div>
     </div>
-
-    <h2>3. Como rodar sem drama</h2>
-    <pre>npm install
+    <h3>Desenvolvimento local</h3>
+    <pre>cp .env.example .env.local
+npm ci
 npm run dev</pre>
     <p>
-      Depois abra <code>http://localhost:3000</code>. Se quiser usar outra porta:
+      O front abre em <code>http://localhost:3000</code> e, em desenvolvimento, usa por padrão
+      <code>http://localhost:8000/api</code>. Em produção, usa <code>/api</code> na mesma origem.
+      A configuração <code>NEXT_PUBLIC_API_URL=mock</code> existe somente para execução isolada e testes.
     </p>
-    <pre>npm run dev -- -p 3001</pre>
 
-    <h3>Comandos de validação</h3>
-    <pre>npm run typecheck
-npm run lint
-npm test
-npm run build</pre>
-
-    <h2>4. Estrutura mental do projeto</h2>
+    <h2>3. Arquitetura do frontend</h2>
     <pre>src/
-  app/                  rotas do Next App Router
-  components/           peças reutilizáveis de tela
-  components/activity/  relatos e formulário de atividade
-  components/report/    seleção, editor, canvas A4 e PDF
-  components/layout/    menu lateral, cabeçalho e shell
-  services/             camada de API e mocks
+  app/                  páginas e rotas do App Router
+  components/activity/  cadastro, edição, modelos e fotos dos relatos
+  components/report/    editor, validação e prévia executiva/A4
+  components/admin/     CRUD administrativo orientado por metadados
+  components/layout/    shell, cabeçalho e navegação por perfil
+  services/api.ts       contrato, cliente HTTP e implementação mock
+  services/auth.ts      sessão, login, logout e CSRF
+  services/queries.ts   consultas compartilhadas do TanStack Query
+  services/administration.ts  cliente da API administrativa
+  lib/                  ciclos, PDF e utilitários
   types.ts              tipos centrais do domínio
-  lib/                  utilitários pequenos
-  test/                 testes</pre>
-
+  test/                 testes unitários e de componentes
+e2e/                    jornadas Playwright mockada e integrada</pre>
     <p>
-      Se você veio do backend, leia nesta ordem:
+      Componentes de tela consomem <code>api</code>; a escolha entre <code>httpApi</code> e <code>mockApi</code>
+      ocorre em um único ponto. O cliente HTTP centraliza URL base, cookies, CSRF, paginação, serialização
+      e tradução dos erros do backend.
     </p>
+
+    <h2>4. Autenticação e segurança</h2>
     <ul>
-      <li><code>src/types.ts</code>: entidades do domínio.</li>
-      <li><code>src/services/api.ts</code>: contrato da API que o Django deve implementar depois.</li>
-      <li><code>src/services/mock-data.ts</code>: dados fake usados agora.</li>
-      <li><code>src/app/...</code>: páginas e rotas.</li>
-      <li><code>src/components/...</code>: pedaços visuais reutilizáveis.</li>
+      <li>login por e-mail e senha, com sessão Django em cookie <code>HttpOnly</code>;</li>
+      <li>requisições usam <code>credentials: include</code> e token CSRF em operações mutáveis;</li>
+      <li>a sessão é restaurada por <code>/me</code> após recarga;</li>
+      <li>logout invalida leituras pendentes, limpa tokens legados e é propagado entre abas;</li>
+      <li>respostas 401 limpam o estado local e redirecionam o fluxo de autenticação;</li>
+      <li>arquivos PDF são privados e dependem de sessão válida.</li>
     </ul>
-
-    <h2>5. As entidades que importam</h2>
-    <h3><code>ActivityReport</code></h3>
-    <p>
-      É o relato original enviado pelo gestor. Contém título, data, local, descrição, resultado,
-      público beneficiado, área, gestor e fotos.
-    </p>
-    <p>
-      Regra de ouro: edição editorial não mexe aqui.
-    </p>
-
-    <h3><code>ReportCard</code></h3>
-    <p>
-      É a versão editorial do relato dentro do relatório. Pode ter título resumido, texto editado,
-      resultado adaptado, foto escolhida e ordem manual.
-    </p>
-    <p>
-      Regra de ouro: mexer no card não altera o relato original.
-    </p>
-
-    <h3><code>WeeklyReport</code></h3>
-    <p>
-      Representa o relatório semanal. Guarda atividades selecionadas, seções por área, cards e versões
-      de PDF geradas.
-    </p>
-
-    <h3><code>ReportVersion</code></h3>
-    <p>
-      Cada geração de PDF cria uma nova versão. Versões antigas não são sobrescritas visualmente.
-    </p>
-
     <div class="note warning">
-      Se no backend você fizer um endpoint que atualiza <code>ActivityReport</code> quando a gerente edita
-      <code>ReportCard</code>, o sistema fica conceitualmente errado. É tipo dar UPDATE na nota fiscal
-      porque alguém corrigiu o texto do e-mail.
+      <code>RoleGuard</code> e a navegação por perfil melhoram a experiência, mas a autorização real permanece
+      no backend. O E2E integrado verifica negação de objetos alheios, endpoints por perfil e PDF anônimo.
     </div>
 
-    <h2 class="page-break">6. Fluxo principal</h2>
-    <h3>1. Gestor registra atividade</h3>
+    <h2 class="page-break">5. Fluxos por perfil</h2>
+    <table>
+      <thead><tr><th>Perfil</th><th>Responsabilidades no frontend</th><th>Rotas principais</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Gestor</strong></td><td>Lista, cria e consulta relatos; edita apenas os próprios durante ciclo aberto ou reaberto.</td><td><code>/relatos</code>, <code>/relatos/novo</code>, <code>/relatos/[id]</code></td></tr>
+        <tr><td><strong>Gerente</strong></td><td>Controla ciclos, seleciona relatos, edita o briefing, valida pendências, publica PDFs e consulta histórico.</td><td><code>/ciclos</code>, <code>/relatorio-semanal</code>, <code>/historico</code></td></tr>
+        <tr><td><strong>Admin</strong></td><td>Gerencia cadastros e consulta dados operacionais, arquivos e auditoria conforme capacidades da API.</td><td><code>/administracao</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Relatos guiados</h3>
     <p>
-      Rota: <code>/relatos/novo</code>. O formulário valida campos obrigatórios e exige foto principal.
-      O gestor e a área vêm preenchidos a partir do usuário autenticado.
+      O cadastro começa pela escolha entre ação/evento, entrega/marco e atendimento/articulação.
+      Perguntas, exemplos e instruções mudam por modelo, mas o payload editorial permanece estável.
+      Há contadores, prévia do card, upload de foto principal e fotos adicionais. Evidência e próximo passo
+      são opcionais; notas internas ficam no relato original e não são copiadas para o PDF.
     </p>
 
-    <h3>2. Gerente seleciona relatos</h3>
+    <h3>Ciclos semanais</h3>
     <p>
-      Rota: <code>/relatorio-semanal/selecao</code>. A gerente marca quais relatos entram no relatório.
-      Nada selecionado significa botão de rascunho desabilitado.
+      Em <code>/ciclos</code>, a gerente abre o próximo período, ajusta o prazo do ciclo ativo, encerra a coleta
+      ou reabre um ciclo encerrado com justificativa. Não é permitido manter dois ciclos ativos simultaneamente.
     </p>
 
-    <h3>3. Sistema gera rascunho</h3>
+    <h2>6. Relatório executivo</h2>
+    <ol>
+      <li>A gerente seleciona os relatos em <code>/relatorio-semanal/selecao</code>.</li>
+      <li>A API cria o <code>WeeklyReport</code>, seções por área e snapshots <code>ReportCard</code>.</li>
+      <li>O editor permite alterar textos editoriais, foto, classificação, pedido de decisão, responsável e prazo.</li>
+      <li>Os cards podem ser reordenados, retirados e restaurados sem excluir o conteúdo original.</li>
+      <li>A API gera uma nova <code>ReportVersion</code>; visualizar e baixar usam o arquivo privado.</li>
+    </ol>
     <p>
-      A função <code>generateDraft</code> cria um <code>WeeklyReport</code> com seções por área e cards
-      baseados nos relatos selecionados.
+      Antes da primeira publicação, a gerente pode reabrir a seleção ou cancelar o rascunho.
+      Depois que há versão publicada, essas ações destrutivas ficam bloqueadas para preservar o histórico.
     </p>
 
-    <h3>4. Gerente edita mosaico</h3>
-    <p>
-      Rota: <code>/relatorio-semanal/[id]/editar</code>. A tela tem três colunas:
-    </p>
+    <h3>Estrutura visual do PDF</h3>
     <ul>
-      <li>esquerda: áreas e páginas;</li>
-      <li>centro: prévia em proporção A4;</li>
-      <li>direita: propriedades do card selecionado.</li>
+      <li><strong>Página 1:</strong> leitura executiva, total de iniciativas, áreas mobilizadas, evidências, até três destaques, até três pontos de atenção e três prioridades.</li>
+      <li><strong>Páginas seguintes:</strong> síntese e cards detalhados agrupados por área.</li>
+      <li><strong>Versões:</strong> numeração sequencial, autor e data de geração, sem sobrescrever o artefato anterior.</li>
     </ul>
 
-    <h3>5. Geração do PDF</h3>
-    <p>
-      A ação valida se há cards e cria uma nova <code>ReportVersion</code>. Hoje é mockado; depois vira
-      chamada real ao backend.
-    </p>
-
-    <h2>7. Onde entra o Django</h2>
-    <p>
-      A integração futura fica centralizada em <code>src/services/api.ts</code>. A ideia é trocar o
-      <code>mockApi</code> por um cliente HTTP real sem sair editando componente por componente.
-    </p>
-
-    <h3>Contrato previsto</h3>
+    <h3>Bloqueios antes de publicar</h3>
+    <p>O front impede a geração quando encontra qualquer uma destas pendências:</p>
     <ul>
-      <li><code>getAuthenticatedUser</code>: usuário logado.</li>
-      <li><code>listWeeklyCycles</code>: semanas de coleta.</li>
-      <li><code>listActivityReports</code>: relatos filtráveis.</li>
-      <li><code>createActivityReport</code>: cria relato.</li>
-      <li><code>uploadPhotos</code>: envia imagens.</li>
-      <li><code>getCollectionOverview</code>: resumo da coleta.</li>
-      <li><code>generateDraft</code>: cria relatório editorial.</li>
-      <li><code>updateReportCard</code>: edita card editorial.</li>
-      <li><code>reorderReportCards</code>: salva ordem manual.</li>
-      <li><code>removeReportCard</code>: retira card sem apagar relato.</li>
-      <li><code>generatePdf</code>: gera nova versão.</li>
-      <li><code>getPdfUrl</code>: retorna URL do PDF.</li>
+      <li>leitura executiva vazia ou ausência de cards ativos;</li>
+      <li>campos editoriais obrigatórios vazios ou acima dos limites;</li>
+      <li>mais de três destaques ou mais de três pontos de atenção;</li>
+      <li>destaque sem evidência;</li>
+      <li>decisão necessária sem pedido claro;</li>
+      <li>próximo passo sem responsável ou prazo.</li>
     </ul>
 
-    <h3>Variável de ambiente</h3>
+    <h2 class="page-break">7. Contrato com a API Django</h2>
     <p>
-      O arquivo já prevê <code>NEXT_PUBLIC_API_URL</code>. Quando a API Django existir, o cliente real
-      deve usar essa URL como base.
-    </p>
-
-    <h2>8. Permissões</h2>
-    <ul>
-      <li><strong>Gestor:</strong> cria e consulta relatos; não edita mosaico.</li>
-      <li><strong>Gerente:</strong> seleciona relatos, edita cards e gera PDF.</li>
-      <li><strong>Administrador técnico:</strong> acessa administração de usuários, áreas e prazos.</li>
-    </ul>
-    <p>
-      A proteção visual usa <code>RoleGuard</code>. No mundo real, o backend ainda precisa validar tudo.
-      Frontend escondendo botão não é segurança; é só educação visual.
-    </p>
-
-    <h2>9. Arquivos importantes</h2>
-    <ul>
-      <li><code>src/types.ts</code>: vocabulário do sistema.</li>
-      <li><code>src/services/api.ts</code>: interface da API e mock atual.</li>
-      <li><code>src/services/mock-data.ts</code>: massa simulada em português.</li>
-      <li><code>src/components/activity/ActivityForm.tsx</code>: cadastro de atividade.</li>
-      <li><code>src/components/activity/activitySchema.ts</code>: validação Zod.</li>
-      <li><code>src/app/relatorio-semanal/selecao/page.tsx</code>: seleção editorial.</li>
-      <li><code>src/app/relatorio-semanal/[id]/editar/page.tsx</code>: editor do mosaico.</li>
-      <li><code>src/components/report/ReportCanvas.tsx</code>: área A4 com dnd-kit.</li>
-      <li><code>src/test/domain.test.ts</code>: testes de regras centrais.</li>
-    </ul>
-
-    <h2>10. Testes existentes</h2>
-    <p>
-      Os testes estão em <code>src/test/domain.test.ts</code>. Eles cobrem:
+      A integração está ativa por meio de <code>httpApi</code>. Os grupos principais do contrato são:
     </p>
     <ul>
-      <li>validação do formulário de atividade;</li>
-      <li>bloqueio sem foto principal;</li>
-      <li>permissões por perfil;</li>
-      <li>seleção de relatos;</li>
-      <li>botão de rascunho desabilitado sem seleção;</li>
-      <li>reordenação de cards;</li>
-      <li>preservação do relato original;</li>
-      <li>retirada de card sem excluir relato;</li>
-      <li>geração de nova versão;</li>
-      <li>fluxo completo de ponta a ponta.</li>
+      <li><strong>Sessão:</strong> saúde, CSRF, login, usuário autenticado e logout.</li>
+      <li><strong>Cadastros:</strong> áreas, usuários e recursos administrativos.</li>
+      <li><strong>Ciclos:</strong> listar, criar, ajustar prazo, encerrar e reabrir.</li>
+      <li><strong>Coleta:</strong> listar/criar/editar relatos, panorama e gestores pendentes.</li>
+      <li><strong>Curadoria:</strong> gerar rascunho, editar relatório/seções/cards, ordenar, retirar e restaurar.</li>
+      <li><strong>Publicação:</strong> listar versões, gerar PDF e obter URL autenticada.</li>
     </ul>
+    <p>
+      Listagens paginadas são percorridas pelo helper <code>listAll</code>. Uploads usam <code>FormData</code>;
+      os demais comandos enviam JSON. Mensagens de validação e domínio retornadas pelo Django são exibidas
+      ao usuário, inclusive erros de permissão, conflito e estado do ciclo.
+    </p>
 
-    <h2>11. Checklist para mexer sem quebrar</h2>
+    <h2>8. Administração</h2>
+    <p>
+      A área administrativa é dirigida pelos metadados devolvidos por <code>/administration/resources</code>.
+      Assim, campos, colunas e capacidades de criar, editar e excluir respeitam o backend.
+    </p>
     <ul>
-      <li>Não coloque <code>fetch</code> direto em componente.</li>
-      <li>Não edite <code>ActivityReport</code> quando a ação for editorial.</li>
-      <li>Não crie status de tarefa.</li>
-      <li>Não transforme a home em dashboard cheio de gráfico.</li>
-      <li>Não invente marca, slogan ou logo.</li>
-      <li>Use sempre o nome <strong>synthesis</strong>.</li>
-      <li>Antes de entregar, rode <code>npm run typecheck</code>, <code>npm run lint</code>, <code>npm test</code> e <code>npm run build</code>.</li>
+      <li>CRUD de usuários, áreas e ciclos;</li>
+      <li>grupos e permissões técnicas para superusuários;</li>
+      <li>consulta de relatos, fotos, relatórios, seções, cards e versões;</li>
+      <li>busca, paginação, detalhes, arquivos vinculados e trilha de auditoria;</li>
+      <li>confirmação para exclusões e apresentação de conflitos de integridade.</li>
+    </ul>
+    <p>
+      Grupos e permissões técnicas atendem ao Django Admin. O perfil de negócio
+      (<code>gestor</code>, <code>gerente</code> ou <code>admin</code>) continua governando os fluxos do synthesis.
+    </p>
+
+    <h2>9. Validação e testes</h2>
+    <p><strong>Resultado verificado em 14/09/2026:</strong></p>
+    <table>
+      <thead><tr><th>Comando</th><th>Resultado</th><th>Escopo</th></tr></thead>
+      <tbody>
+        <tr><td><code>npm run typecheck</code></td><td class="ok">Aprovado</td><td>Tipos TypeScript</td></tr>
+        <tr><td><code>npm run lint</code></td><td class="ok">Aprovado</td><td>Regras ESLint</td></tr>
+        <tr><td><code>npm test</code></td><td class="ok">22/22 aprovados</td><td>3 arquivos Vitest</td></tr>
+      </tbody>
+    </table>
+    <p>As suítes automatizadas disponíveis são:</p>
+    <ul>
+      <li><code>src/test/domain.test.ts</code>: domínio, perfis, ciclos, cards, versões e validação editorial;</li>
+      <li><code>src/test/auth.test.ts</code>: sessão e comportamento de autenticação;</li>
+      <li><code>src/test/administration.test.tsx</code>: CRUD, busca, capacidades e erros administrativos;</li>
+      <li><code>npm run test:e2e</code>: jornada Playwright com API mockada;</li>
+      <li><code>npm run test:e2e:integration</code>: jornada real com Django e PostgreSQL efêmero.</li>
+    </ul>
+    <p>
+      O E2E integrado cobre sessão/CSRF, upload válido e inválido, edição própria, isolamento de objetos,
+      curadoria, ordenação, retirada/restauração, duas versões reais de PDF, fechamento do ciclo,
+      proteção de arquivos, CRUD administrativo e auditoria.
+    </p>
+    <div class="note warning">
+      <strong>Não executado nesta atualização:</strong> build e E2E. Eles exigem mais tempo e, no caso do
+      E2E integrado, Docker/PostgreSQL e ambiente de aceite preparado.
+    </div>
+
+    <h2>10. Implantação e operação</h2>
+    <ul>
+      <li>Node 22 é a versão de referência registrada em <code>.nvmrc</code>.</li>
+      <li>O build usa <code>next build --webpack</code> e produz artefato standalone.</li>
+      <li>Em produção, frontend e API devem compartilhar a mesma origem HTTPS.</li>
+      <li>O proxy reverso encaminha <code>/api</code> e os arquivos privados ao backend.</li>
+      <li>A distribuição do MVP é manual: baixar o PDF versionado e anexá-lo ao canal institucional.</li>
     </ul>
 
-    <h2>12. Tradução backendês</h2>
-    <pre>ActivityReport  = tabela de entrada, fonte da verdade
-ReportCard      = DTO/editorial snapshot para o relatório
-WeeklyReport    = aggregate root do relatório semanal
-ReportSection   = agrupamento por área
-ReportVersion   = artefato gerado, imutável
-mockApi         = fake repository/client
-TanStack Query  = cache client-side + loading/error states
-RoleGuard       = autorização visual, não segurança real</pre>
+    <h2>11. Arquivos de referência</h2>
+    <ul>
+      <li><code>src/services/api.ts</code>: contrato e implementações HTTP/mock.</li>
+      <li><code>src/services/auth.ts</code>: sessão e proteção CSRF.</li>
+      <li><code>src/types.ts</code>: entidades compartilhadas.</li>
+      <li><code>src/components/activity/activityTemplates.ts</code>: modelos e limites editoriais.</li>
+      <li><code>src/components/report/reportValidation.ts</code>: bloqueios de publicação.</li>
+      <li><code>src/components/report/ExecutiveReportPage.tsx</code>: primeira página do briefing.</li>
+      <li><code>src/app/relatorio-semanal/[id]/editar/page.tsx</code>: orquestração do editor.</li>
+      <li><code>src/services/administration.ts</code>: contrato administrativo.</li>
+      <li><code>e2e/integration.spec.ts</code>: aceite integrado do MVP.</li>
+    </ul>
+
+    <h2>12. Regras de manutenção</h2>
+    <ul>
+      <li>Preservar a separação entre relato original e snapshot editorial.</li>
+      <li>Centralizar chamadas HTTP nos serviços, sem <code>fetch</code> espalhado por componentes.</li>
+      <li>Tratar <code>RoleGuard</code> como autorização visual, nunca como barreira de segurança.</li>
+      <li>Manter mensagens de domínio do backend visíveis e acionáveis.</li>
+      <li>Não sobrescrever versões já publicadas nem expor arquivos sem autenticação.</li>
+      <li>Executar typecheck, lint, testes, E2E e build antes de uma entrega de produção.</li>
+    </ul>
 
     <div class="note">
-      Resumo final: o frontend está montado para trocar mock por Django sem precisar sair catando chamada
-      HTTP perdida pela interface. O cérebro pode descansar por cinco minutos.
+      <strong>Estado atual:</strong> o frontend deixou de ser apenas um protótipo com mocks. Ele opera sobre
+      a API Django, implementa os três perfis do MVP e mantém o mock como apoio para testes isolados.
     </div>
   </body>
 </html>

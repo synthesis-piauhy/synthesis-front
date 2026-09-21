@@ -7,6 +7,7 @@ import { Archive, CalendarRange, FilePlus2, Files, LayoutGrid, ListChecks, Home,
 import { useAuth } from "@/app/providers";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
 
 type NavigationItem = {
   href: string;
@@ -93,10 +94,10 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
         ) : null}
       </nav>
       <div className="border-t border-white/10 p-4 text-sm">
-        <div className="mb-3 flex items-center gap-3 rounded-app bg-white/[0.07] p-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent font-semibold text-primary">{user?.name?.charAt(0) ?? "U"}</span>
+        <Link href="/perfil" onClick={onClose} aria-label="Abrir meu perfil" aria-current={pathname === "/perfil" ? "page" : undefined} className="mb-3 flex items-center gap-3 rounded-app bg-white/[0.07] p-3 transition hover:bg-white/[0.13]">
+          <ProfileAvatar user={{ name: user?.name ?? "Usuário", avatarUrl: user?.avatarUrl }} className="size-9 font-semibold" />
           <div className="min-w-0"><div className="truncate font-semibold text-white">{user?.name ?? "Carregando"}</div><div className="truncate text-xs text-white/55">{user?.area ?? "Área"} · {role}</div></div>
-        </div>
+        </Link>
         <Button
           disabled={leaving}
           variant="outline"
