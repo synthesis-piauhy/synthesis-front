@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export function proxy(request: NextRequest) {
+  if (
+    request.nextUrl.pathname === "/" &&
+    !request.cookies.has("sessionid") &&
+    process.env.NEXT_PUBLIC_API_URL !== "mock"
+  ) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const development = process.env.NODE_ENV !== "production";
   const apiOrigin = development ? "http://localhost:8000 http://127.0.0.1:8000" : "";

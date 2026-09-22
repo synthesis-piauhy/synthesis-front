@@ -14,6 +14,24 @@ O frontend fica em `http://localhost:3000` e usa, por padrão, a API em
 `http://localhost:8000/api`. O backend deve estar executando, com as migrações
 e o comando `seed_synthesis` aplicados.
 
+## Compartilhar uma prévia pela internet
+
+O [cloudflared](https://developers.cloudflare.com/tunnel/downloads/) deve estar no `PATH` ou em
+`.tools/cloudflared` na pasta do projeto. Na máquina atual, ele já está instalado em `~/.local/bin`.
+Na pasta que contém `synthesis-back` e `synthesis-front`, execute:
+
+```sh
+# Se o PostgreSQL local ainda não estiver ativo:
+docker compose -f synthesis-back/compose.yaml --env-file synthesis-back/.env up -d --wait postgres
+python3 share-preview.py
+```
+
+O comando inicia Django, Next.js e um Quick Tunnel gratuito. Ele mostra um link HTTPS temporário
+`*.trycloudflare.com`; compartilhe esse link apenas com as pessoas que devem testar a aplicação.
+O backend fica em `127.0.0.1:8000` e o frontend em `127.0.0.1:3000`. Encerre tudo com Ctrl+C.
+O link muda a cada execução e só funciona enquanto o computador, a conexão e o comando estiverem ativos.
+Use contas e dados de teste nessa prévia.
+
 Entre com o e-mail e a senha de um usuário criado no Django Admin. A aplicação usa
 sessão Django em cookie `HttpOnly`, restaura a sessão após recarga e coordena logout
 entre abas. Tokens legados eventualmente existentes no `localStorage` são removidos.

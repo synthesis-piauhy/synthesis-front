@@ -5,6 +5,9 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   output: "standalone",
+  allowedDevOrigins: process.env.SYNTHESIS_PREVIEW_ORIGIN
+    ? [new URL(process.env.SYNTHESIS_PREVIEW_ORIGIN).hostname]
+    : [],
   experimental: { useTypeScriptCli: false },
   async headers() {
     return [{ source: "/:path*", headers: [
