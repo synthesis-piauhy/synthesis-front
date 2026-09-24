@@ -81,7 +81,7 @@ test.describe.serial("aceite integrado do MVP", () => {
     await page.getByLabel("Quem participou ou foi beneficiado?").fill("participantes da área");
     await page.getByLabel("Quantas pessoas participaram?").fill("20");
     await page.getByLabel("O que os participantes conseguiram fazer ou receber?").fill("concluíram o plano de ação da próxima etapa");
-    await page.getByLabel("Título", { exact: true }).fill("Oficina integrada do MVP");
+    await page.locator("#activity-title").fill("Oficina integrada do MVP");
     await page.getByLabel("Local").fill("Sala de formação");
     await page.getByText("Adicionar evidência, próximo passo ou informações de apoio (opcional)").click();
     await page.getByLabel(/Evidência do resultado/).fill("20 planos concluídos");
@@ -102,6 +102,9 @@ test.describe.serial("aceite integrado do MVP", () => {
     await expect(page.getByRole("heading", { name: "Oficina integrada do MVP", level: 2 })).toBeVisible();
     ownActivityId = new URL(page.url()).pathname.split("/").at(-1) ?? "";
     expect(ownActivityId).not.toBe("");
+    const photo = page.getByRole("img", { name: "aceite.png" });
+    await expect(photo).toHaveAttribute("src", /\/api\/files\/photos\/[0-9a-f-]{36}$/);
+    await expect.poll(() => photo.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
 
     await page.getByRole("button", { name: "Editar meu relato" }).click();
     await expect(page.getByLabel("Qual foi o tema ou nome da ação?")).toHaveValue("plano de ação da área");
@@ -168,6 +171,15 @@ test.describe.serial("aceite integrado do MVP", () => {
     const versions = await api<{ items: Array<{ id: string; version: number }> }>(page, `/weekly-reports/${reportId}/versions?page=1&pageSize=100`);
     expect(versions.body.items.map((item) => item.version)).toEqual([1, 2]);
     expect(versions.body.items[0].id).toBe(firstVersionId);
+    const pdfUrl = await api<string>(page, `/weekly-reports/versions/${firstVersionId}/url`);
+    expect(pdfUrl.status).toBe(200);
+    expect(pdfUrl.body).toBe(`/api/files/versions/${firstVersionId}`);
+    const browserPdf = await page.evaluate(async (url) => {
+      const response = await fetch(url, { credentials: "include" });
+      return { status: response.status, contentType: response.headers.get("content-type") };
+    }, pdfUrl.body);
+    expect(browserPdf.status).toBe(200);
+    expect(browserPdf.contentType).toContain("application/pdf");
     const privatePdf = await api<string>(page, `/files/versions/${firstVersionId}`);
     expect(privatePdf.status).toBe(200);
     expect(privatePdf.contentType).toContain("application/pdf");
